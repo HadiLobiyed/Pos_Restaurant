@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum OrderItemStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id         String     @id @default(cuid())
+  name       String
+  menuItems  MenuItem[]
+  createdAt  DateTime   @default(now())
+}
+
+model MenuItem {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  image       String?
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  visible     Boolean   @default(true)
+  stock       Int?      // null = pas de suivi, sinon quantité restante (ex: boissons)
+  barcode     String?   // code-barres
+  orderItems  OrderItem[]
+  createdAt   DateTime  @default(now())
+}
+
+model Table {
+  id              String    @id @default(cuid())
+  number          Int       @unique
+  qrCode          String?   // base64 or URL path
+  reserved        Boolean   @default(false)
+  reservationTime DateTime?
+  orders          Order[]
+}
+
+model Order {
+  id         String        @id @default(cuid())
+  tableId    String
+  table      Table         @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  status     OrderStatus   @default(PENDING)
+  orderItems OrderItem[]
+  payment    Payment?
+  createdAt  DateTime      @default(now())
+}
+
+model OrderItem {
+  id         String         @id @default(cuid())
+  orderId    String
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem       @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  quantity   Int
+  comment    String?
+  status     OrderItemStatus @default(PENDING)
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  orderId   String        @unique
+  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  total     Decimal       @db.Decimal(10, 2)
+  status    PaymentStatus @default(UNPAID)
+  createdAt DateTime      @default(now())
+}
