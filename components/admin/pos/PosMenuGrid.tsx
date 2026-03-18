@@ -115,7 +115,7 @@ export function PosMenuGrid({
               <div className="p-2.5">
                 <p className="truncate text-sm font-medium text-dark-800">{item.name}</p>
                 <p className="text-primary-600 font-semibold mt-0.5">
-                  {price.toFixed(2)} €
+                  {price.toFixed(2)} DA
                 </p>
               </div>
             </button>

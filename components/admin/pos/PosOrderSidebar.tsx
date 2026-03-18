@@ -218,7 +218,7 @@ export function PosOrderSidebar({
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-dark-800">{c.name}</p>
-                  <p className="text-dark-500">{(c.price * c.quantity).toFixed(2)} €</p>
+                  <p className="text-dark-500">{(c.price * c.quantity).toFixed(2)} DA</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -256,7 +256,7 @@ export function PosOrderSidebar({
       <div className="space-y-2 border-t border-dark-200 p-5">
         <div className="flex justify-between border-t border-dark-200 pt-3 text-base font-bold">
           <span>Total</span>
-          <span className="text-primary-600">{total.toFixed(2)} €</span>
+          <span className="text-primary-600">{total.toFixed(2)} DA</span>
         </div>
 
         {message && (
@@ -283,19 +283,11 @@ export function PosOrderSidebar({
             <>
               <button
                 type="button"
-                onClick={sendKot}
+                onClick={() => sendKot(false)}
                 disabled={sending !== null || cart.length === 0}
                 className="rounded-xl bg-dark-700 py-2.5 text-sm font-medium text-white transition hover:bg-dark-800 disabled:opacity-50"
               >
                 {sending === "kot" ? "Envoi..." : "KOT"}
-              </button>
-              <button
-                type="button"
-                onClick={() => sendKot(true)}
-                disabled={sending !== null || cart.length === 0}
-                className="rounded-xl bg-teal-600 py-2.5 text-sm font-medium text-white transition hover:bg-teal-700 disabled:opacity-50"
-              >
-                KOT & Imprimer
               </button>
               <button
                 type="button"
@@ -304,14 +296,6 @@ export function PosOrderSidebar({
                 className="rounded-xl bg-primary-500 py-2.5 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
               >
                 {sending === "bill" ? "..." : "Facture"}
-              </button>
-              <button
-                type="button"
-                onClick={() => sendBill(true)}
-                disabled={sending !== null || cart.length === 0}
-                className="rounded-xl bg-green-600 py-2.5 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
-              >
-                {sending === "bill_payment" ? "..." : "Facture & Payer"}
               </button>
             </>
           )}

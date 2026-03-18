@@ -7,7 +7,6 @@ const secret = process.env.NEXTAUTH_SECRET || "restaurant-pos-dev-secret-min-32-
 
 export const authOptions: NextAuthOptions = {
   secret,
-  trustHost: true,
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/admin/login" },
   providers: [

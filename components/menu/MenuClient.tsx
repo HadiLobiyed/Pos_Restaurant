@@ -131,7 +131,7 @@ export function MenuClient({ tableId, items }: { tableId: string | null; items: 
             onClick={() => setCartOpen(true)}
             className="fixed bottom-6 left-4 right-4 mx-auto flex max-w-4xl items-center justify-center gap-2 rounded-2xl bg-primary-500 py-4 font-semibold text-white shadow-elevated transition hover:bg-primary-600"
           >
-            Cart ({cartCount}) — ${cartTotal.toFixed(2)}
+            Cart ({cartCount}) — {cartTotal.toFixed(2)} DA
           </button>
           <CartDrawer
             open={cartOpen}

@@ -66,7 +66,7 @@ export function MenuItemRow({
       <td className="px-4 py-3 font-mono text-sm text-dark-600">
         {item.barcode || "—"}
       </td>
-      <td className="px-4 py-3 text-sm font-medium text-dark-700">{Number(item.price).toFixed(2)} €</td>
+      <td className="px-4 py-3 text-sm font-medium text-dark-700">{Number(item.price).toFixed(2)} DA</td>
       <td className="px-4 py-3">
         {stockEditing ? (
           <div className="flex items-center gap-1">

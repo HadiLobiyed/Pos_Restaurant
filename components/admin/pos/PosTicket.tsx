@@ -88,9 +88,9 @@ export function PosTicket({ orderNumber, cart, tableNumber, onClose, onPrint }: 
                 <tr key={c.menuItemId} className="border-b border-dark-100">
                   <td className="py-1.5 pr-2">{c.quantity}</td>
                   <td className="py-1.5 pr-2">{c.name}</td>
-                  <td className="py-1.5 text-right">{c.price.toFixed(2)} €</td>
+                  <td className="py-1.5 text-right">{c.price.toFixed(2)} DA</td>
                   <td className="py-1.5 pl-2 text-right">
-                    {(c.price * c.quantity).toFixed(2)} €
+                    {(c.price * c.quantity).toFixed(2)} DA
                   </td>
                 </tr>
               ))}
@@ -100,11 +100,11 @@ export function PosTicket({ orderNumber, cart, tableNumber, onClose, onPrint }: 
           <div className="mt-4 space-y-1 border-t border-dark-200 pt-4">
             <div className="flex justify-between">
               <span>Sous-total</span>
-              <span>{subtotal.toFixed(2)} €</span>
+              <span>{subtotal.toFixed(2)} DA</span>
             </div>
             <div className="flex justify-between font-bold text-base pt-1">
               <span>Total</span>
-              <span>{total.toFixed(2)} €</span>
+              <span>{total.toFixed(2)} DA</span>
             </div>
           </div>
 

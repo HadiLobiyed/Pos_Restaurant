@@ -1,15 +1,16 @@
 {
   "/menu/page": "app/menu/page.js",
-  "/api/orders/kitchen/route": "app/api/orders/kitchen/route.js",
-  "/api/orders/route": "app/api/orders/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/orders/items/[id]/route": "app/api/orders/items/[id]/route.js",
   "/api/menu/route": "app/api/menu/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/tables/[id]/qr/route": "app/api/tables/[id]/qr/route.js",
   "/api/tables/route": "app/api/tables/route.js",
+  "/api/categories/route": "app/api/categories/route.js",
+  "/api/orders/route": "app/api/orders/route.js",
+  "/api/orders/kitchen/route": "app/api/orders/kitchen/route.js",
   "/api/orders/[id]/route": "app/api/orders/[id]/route.js",
-  "/api/payments/route": "app/api/payments/route.js",
-  "/admin/kitchen/page": "app/admin/kitchen/page.js",
-  "/admin/tables/page": "app/admin/tables/page.js",
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/pos/page": "app/admin/pos/page.js"
+  "/admin/tables/page": "app/admin/tables/page.js",
+  "/admin/pos/page": "app/admin/pos/page.js",
+  "/admin/menu/page": "app/admin/menu/page.js",
+  "/admin/kitchen/page": "app/admin/kitchen/page.js"
 }

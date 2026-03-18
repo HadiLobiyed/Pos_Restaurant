@@ -83,7 +83,7 @@ export function CartDrawer({
                 <div className="flex justify-between items-start">
                   <span className="font-medium text-gray-800">{c.name}</span>
                   <span className="text-primary-600 font-medium">
-                    ${(c.price * c.quantity).toFixed(2)}
+                    {(c.price * c.quantity).toFixed(2)} DA
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export function CartDrawer({
           <div className="border-t border-dark-200 p-5">
             <div className="flex justify-between text-lg font-bold mb-3">
               <span>Total</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{total.toFixed(2)} DA</span>
             </div>
             {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
             <button

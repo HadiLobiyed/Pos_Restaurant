@@ -30,6 +30,7 @@ export function MenuItemForm({
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [visible, setVisible] = useState(true);
   const [stock, setStock] = useState("");
@@ -53,6 +54,30 @@ export function MenuItemForm({
       setBarcode("");
     }
   }, [editingItem, categories]);
+
+  async function handleImageSelected(file: File) {
+    setError("");
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/uploads/menu-image", { method: "POST", body: fd });
+      if (!res.ok) {
+        setError("Erreur upload image.");
+        return;
+      }
+      const data = (await res.json()) as { path?: string };
+      if (!data.path) {
+        setError("Upload invalide.");
+        return;
+      }
+      setImage(data.path);
+    } catch {
+      setError("Erreur upload image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -121,13 +146,39 @@ export function MenuItemForm({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-dark-700">Image URL</label>
+            <label className="mb-1.5 block text-sm font-semibold text-dark-700">Image</label>
             <input
-              type="url"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImageSelected(f);
+              }}
               className="input-field"
             />
+            <div className="mt-2 flex items-center gap-3">
+              <div className="h-14 w-14 overflow-hidden rounded-xl bg-dark-100">
+                {image ? (
+                  <img src={image} alt="Aperçu" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-dark-400">
+                    —
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-dark-500">
+                {uploadingImage ? "Upload en cours..." : image ? "Image sélectionnée." : "Aucune image."}
+              </div>
+              {image && (
+                <button
+                  type="button"
+                  onClick={() => setImage("")}
+                  className="ml-auto text-xs font-semibold text-red-600 hover:underline"
+                >
+                  Retirer
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-dark-700">Code barre</label>
@@ -185,7 +236,7 @@ export function MenuItemForm({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploadingImage}
               className="btn-primary"
             >
               {editingItem ? "Modifier" : "Créer"}

@@ -39,7 +39,7 @@ export function MenuItemCard({
           <p className="mt-0.5 line-clamp-2 text-xs text-dark-500">{item.description}</p>
         )}
         <div className="mt-3 flex items-center justify-between">
-          <span className="font-bold text-primary-600">{price.toFixed(2)} €</span>
+          <span className="font-bold text-primary-600">{price.toFixed(2)} DA</span>
           <button
             onClick={onAdd}
             disabled={disabled}
