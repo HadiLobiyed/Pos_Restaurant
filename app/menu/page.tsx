@@ -21,7 +21,11 @@ function MenuContent() {
 
   useEffect(() => {
     fetch("/api/menu?public=true")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) return [];
+        const data = await r.json();
+        return Array.isArray(data) ? data : [];
+      })
       .then(setItems)
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
