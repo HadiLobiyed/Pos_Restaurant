@@ -20,7 +20,19 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="animate-slide-up flex flex-col gap-4 sm:flex-row">
+        <div className="animate-slide-up flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+          <Link
+            href="/commander"
+            className="group flex items-center justify-center gap-2 rounded-2xl bg-accent-500 px-8 py-4 font-semibold text-white shadow-glow transition-all hover:bg-accent-400 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Commander
+          </Link>
+          <Link
+            href="/reserver"
+            className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-white/40 bg-white/10 px-8 py-4 font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+          >
+            Réserver une table
+          </Link>
           <Link
             href="/admin/login"
             className="group flex items-center justify-center gap-2 rounded-2xl bg-primary-500 px-8 py-4 font-semibold text-white shadow-glow transition-all hover:bg-primary-400 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
@@ -32,7 +44,7 @@ export default function HomePage() {
           </Link>
           <Link
             href="/menu"
-            className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-white/30 bg-white/5 px-8 py-4 font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:border-white/50"
+            className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-white/30 bg-white/5 px-8 py-4 font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 hover:border-white/50"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />

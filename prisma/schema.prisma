@@ -29,6 +29,12 @@ enum PaymentStatus {
   UNPAID
 }
 
+enum OrderChannel {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -70,13 +76,30 @@ model Table {
 }
 
 model Order {
-  id         String        @id @default(cuid())
-  tableId    String
-  table      Table         @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  status     OrderStatus   @default(PENDING)
-  orderItems OrderItem[]
-  payment    Payment?
-  createdAt  DateTime      @default(now())
+  id              String        @id @default(cuid())
+  tableId         String?
+  table           Table?        @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  channel         OrderChannel  @default(DINE_IN)
+  /// Code affiché au client (ex. CMD-847291) — à emporter / livraison / QR
+  publicCode      String?       @unique
+  customerName    String?
+  customerPhone   String?
+  customerAddress String?
+  status          OrderStatus   @default(PENDING)
+  orderItems      OrderItem[]
+  payment         Payment?
+  createdAt       DateTime      @default(now())
+}
+
+model TableReservation {
+  id             String   @id @default(cuid())
+  name           String
+  phone          String
+  people         Int
+  preferredDate  String?
+  message        String?
+  createdAt      DateTime @default(now())
+  handled        Boolean  @default(false)
 }
 
 model OrderItem {

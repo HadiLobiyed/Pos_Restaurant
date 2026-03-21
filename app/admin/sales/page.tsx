@@ -40,7 +40,7 @@ export default async function SalesPage({
           Revenu total ({format(selectedDate, "d MMM yyyy")})
         </p>
         <p className="mt-1 text-3xl font-bold text-primary-600">
-          {totalRevenue.toFixed(2)} €
+          {totalRevenue.toFixed(2)} DA
         </p>
       </div>
       <div className="card overflow-hidden p-0">
@@ -68,7 +68,8 @@ export default async function SalesPage({
                     {format(payment.createdAt, "HH:mm")}
                   </td>
                   <td className="px-6 py-4 font-medium text-dark-800">
-                    Table {payment.order.table.number}
+                    {payment.order.publicCode ??
+                      (payment.order.table ? `Table ${payment.order.table.number}` : "—")}
                   </td>
                   <td className="px-6 py-4 text-sm text-dark-600">
                     {payment.order.orderItems
@@ -76,7 +77,7 @@ export default async function SalesPage({
                       .join(", ")}
                   </td>
                   <td className="px-6 py-4 font-semibold text-dark-800">
-                    {Number(payment.total).toFixed(2)} €
+                    {Number(payment.total).toFixed(2)} DA
                   </td>
                   <td className="px-6 py-4">
                     <span

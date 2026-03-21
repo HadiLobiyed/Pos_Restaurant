@@ -17,7 +17,12 @@ type Order = {
   id: string;
   status: string;
   createdAt: string;
-  table: { number: number };
+  channel: string;
+  publicCode: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
+  table: { number: number } | null;
   orderItems: OrderItem[];
 };
 

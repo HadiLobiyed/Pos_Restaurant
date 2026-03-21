@@ -15,9 +15,22 @@ type OrderType = {
   id: string;
   status: string;
   createdAt: string;
-  table: { number: number };
+  channel: string;
+  publicCode: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
+  table: { number: number } | null;
   orderItems: OrderItemType[];
 };
+
+function kitchenOrderHeadline(order: OrderType): string {
+  if (order.publicCode) return order.publicCode;
+  if (order.channel === "TAKEAWAY") return "À emporter";
+  if (order.channel === "DELIVERY") return "Livraison";
+  if (order.table) return `Table ${order.table.number}`;
+  return "Commande";
+}
 
 export function KitchenOrderCard({
   order,
@@ -57,13 +70,20 @@ export function KitchenOrderCard({
   return (
     <div className="card overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-dark-100 bg-dark-50/50 p-4">
-        <span className="text-lg font-bold text-dark-900">Table {order.table.number}</span>
+        <span className="text-lg font-bold text-dark-900">{kitchenOrderHeadline(order)}</span>
         <span className={`rounded-lg px-2.5 py-1 text-xs font-medium ${statusColor}`}>
           {displayStatus === "PENDING" ? "En attente" : displayStatus === "IN_PROGRESS" ? "En cours" : "Terminé"}
         </span>
       </div>
-      <div className="p-4 text-sm text-dark-600">
-        {format(new Date(order.createdAt), "HH:mm:ss")}
+      <div className="space-y-1 p-4 text-sm text-dark-600">
+        <p>{format(new Date(order.createdAt), "HH:mm:ss")}</p>
+        {order.channel === "DELIVERY" && (order.customerName || order.customerPhone || order.customerAddress) && (
+          <div className="rounded-lg border border-dark-100 bg-dark-50/80 p-2 text-xs leading-relaxed text-dark-700">
+            {order.customerName && <p className="font-medium">{order.customerName}</p>}
+            {order.customerPhone && <p>{order.customerPhone}</p>}
+            {order.customerAddress && <p className="text-dark-600">{order.customerAddress}</p>}
+          </div>
+        )}
       </div>
       <ul className="space-y-3 px-4 pb-4">
         {items.map((oi) => {

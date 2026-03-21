@@ -62,13 +62,16 @@ export default function PosPage() {
   }, []);
 
   useEffect(() => {
-    if (!orderIdFromUrl || !tables.length) return;
+    if (!orderIdFromUrl) return;
     fetch(`/api/orders/${orderIdFromUrl}`)
       .then((r) => r.json())
       .then((order) => {
         if (!order?.id) return;
         setLoadedOrderId(order.id);
-        setTableId(order.tableId);
+        setTableId(order.tableId ?? null);
+        if (order.channel === "TAKEAWAY" || order.channel === "DELIVERY") {
+          setOrderType(order.channel);
+        }
         setCart(
           order.orderItems?.map((oi: { menuItemId: string; menuItem: { name: string; price: { toString(): string } }; quantity: number; comment: string | null }) => ({
             menuItemId: oi.menuItemId,
@@ -80,7 +83,7 @@ export default function PosPage() {
         );
       })
       .catch(() => {});
-  }, [orderIdFromUrl, tables.length]);
+  }, [orderIdFromUrl]);
 
   const categories = useMemo(() => {
     if (!Array.isArray(menuItems)) return [];

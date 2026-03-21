@@ -3,17 +3,42 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
-const createSchema = z.object({
-  tableId: z.string(),
-  items: z.array(
-    z.object({
-      menuItemId: z.string(),
-      quantity: z.number().int().positive(),
-      comment: z.string().optional(),
-    })
-  ),
+const itemSchema = z.object({
+  menuItemId: z.string(),
+  quantity: z.number().int().positive(),
+  comment: z.string().optional(),
 });
+
+const createSchema = z
+  .object({
+    channel: z.enum(["DINE_IN", "TAKEAWAY", "DELIVERY"]),
+    tableId: z.string().optional(),
+    items: z.array(itemSchema),
+    customerName: z.string().optional(),
+    customerPhone: z.string().optional(),
+    customerAddress: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.channel === "DINE_IN" && (!data.tableId || data.tableId.length === 0)) {
+      ctx.addIssue({ code: "custom", message: "tableId requis pour une commande sur table", path: ["tableId"] });
+    }
+    if (data.channel === "DELIVERY") {
+      if (!data.customerName?.trim()) ctx.addIssue({ code: "custom", message: "Nom requis", path: ["customerName"] });
+      if (!data.customerPhone?.trim()) ctx.addIssue({ code: "custom", message: "Téléphone requis", path: ["customerPhone"] });
+      if (!data.customerAddress?.trim()) ctx.addIssue({ code: "custom", message: "Adresse requise", path: ["customerAddress"] });
+    }
+  });
+
+async function generateUniquePublicCode(tx: Prisma.TransactionClient): Promise<string> {
+  for (let i = 0; i < 12; i++) {
+    const code = `CMD-${Math.floor(100000 + Math.random() * 900000)}`;
+    const clash = await tx.order.findFirst({ where: { publicCode: code } });
+    if (!clash) return code;
+  }
+  return `CMD-${Date.now().toString(36).toUpperCase()}`;
+}
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -41,28 +66,41 @@ export async function POST(req: Request) {
     if (!parsed.success)
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
 
-    const { tableId, items } = parsed.data;
+    const { channel, tableId, items, customerName, customerPhone, customerAddress } = parsed.data;
     if (items.length === 0)
       return NextResponse.json({ error: "At least one item required" }, { status: 400 });
 
     const order = await prisma.$transaction(async (tx) => {
-      let table = await tx.table.findUnique({ where: { id: tableId } });
-      // Backward/UX-friendly: allow passing a table number in `tableId`.
-      // (ex: old QR codes or manual testing with ?table=12)
-      if (!table) {
-        const asNumber = Number.parseInt(tableId, 10);
-        if (!Number.isNaN(asNumber)) {
-          table = await tx.table.findUnique({ where: { number: asNumber } });
+      let tableIdResolved: string | null = null;
+      if (channel === "DINE_IN" && tableId) {
+        let table = await tx.table.findUnique({ where: { id: tableId } });
+        if (!table) {
+          const asNumber = Number.parseInt(tableId, 10);
+          if (!Number.isNaN(asNumber)) {
+            table = await tx.table.findUnique({ where: { number: asNumber } });
+          }
         }
-      }
-      if (!table) {
-        const err = new Error("TABLE_NOT_FOUND");
-        err.name = "TableNotFoundError";
-        throw err;
+        if (!table) {
+          const err = new Error("TABLE_NOT_FOUND");
+          err.name = "TableNotFoundError";
+          throw err;
+        }
+        tableIdResolved = table.id;
       }
 
+      const publicCode =
+        channel === "TAKEAWAY" || channel === "DELIVERY" ? await generateUniquePublicCode(tx) : null;
+
       const newOrder = await tx.order.create({
-        data: { tableId: table.id, status: "PENDING" },
+        data: {
+          tableId: tableIdResolved,
+          channel,
+          publicCode,
+          customerName: customerName?.trim() || null,
+          customerPhone: customerPhone?.trim() || null,
+          customerAddress: customerAddress?.trim() || null,
+          status: "PENDING",
+        },
         include: { table: true },
       });
 
@@ -99,7 +137,6 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(order, { status: 201 });
-
   } catch (error: any) {
     if (error?.message === "TABLE_NOT_FOUND") {
       return NextResponse.json({ error: "Table introuvable. Scannez le QR code de votre table." }, { status: 400 });

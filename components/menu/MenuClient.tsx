@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { MenuItemCard } from "./MenuItemCard";
-import { CartDrawer } from "./CartDrawer";
+import { CartDrawer, type OrderContext } from "./CartDrawer";
 export type CartItem = {
   menuItemId: string;
   name: string;
@@ -21,10 +21,29 @@ type Item = {
   category: { id: string; name: string };
 };
 
-export function MenuClient({ tableId, items }: { tableId: string | null; items: Item[] }) {
+export type MenuMode = "table" | "takeaway" | "delivery";
+
+export function MenuClient({
+  tableId,
+  mode,
+  items,
+}: {
+  tableId: string | null;
+  mode: MenuMode;
+  items: Item[];
+}) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+
+  const canOrder = mode === "table" ? !!tableId : true;
+
+  const orderContext: OrderContext | null = useMemo(() => {
+    if (mode === "table" && tableId) return { kind: "table", tableId };
+    if (mode === "takeaway") return { kind: "takeaway" };
+    if (mode === "delivery") return { kind: "delivery" };
+    return null;
+  }, [mode, tableId]);
 
   const categories = useMemo(() => {
     const map = new Map<string, string>();
@@ -93,7 +112,7 @@ export function MenuClient({ tableId, items }: { tableId: string | null; items: 
                   : "border border-dark-200 bg-white text-dark-700 hover:bg-dark-50"
               }`}
             >
-              All
+              Tout
             </button>
             {categories.map((cat) => (
               <button
@@ -116,22 +135,22 @@ export function MenuClient({ tableId, items }: { tableId: string | null; items: 
               key={item.id}
               item={item}
               onAdd={() => addToCart(item)}
-              disabled={!tableId}
+              disabled={!canOrder}
             />
           ))}
         </div>
         {filteredItems.length === 0 && (
-          <p className="text-center text-gray-500 py-8">No items in this category.</p>
+          <p className="text-center text-gray-500 py-8">Aucun plat dans cette catégorie.</p>
         )}
       </div>
 
-      {tableId && (
+      {orderContext && (
         <>
           <button
             onClick={() => setCartOpen(true)}
             className="fixed bottom-6 left-4 right-4 mx-auto flex max-w-4xl items-center justify-center gap-2 rounded-2xl bg-primary-500 py-4 font-semibold text-white shadow-elevated transition hover:bg-primary-600"
           >
-            Cart ({cartCount}) — {cartTotal.toFixed(2)} DA
+            Panier ({cartCount}) — {cartTotal.toFixed(2)} DA
           </button>
           <CartDrawer
             open={cartOpen}
@@ -139,8 +158,7 @@ export function MenuClient({ tableId, items }: { tableId: string | null; items: 
             cart={cart}
             onUpdate={updateCartItem}
             onRemove={removeFromCart}
-            onSubmit={() => setCartOpen(false)}
-            tableId={tableId}
+            orderContext={orderContext}
             onOrderPlaced={() => setCart([])}
           />
         </>

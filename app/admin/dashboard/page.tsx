@@ -7,9 +7,28 @@ import { AutoRefresh } from "@/components/admin/AutoRefresh";
 export const dynamic = "force-dynamic";
 
 function getTableLabel(num: number): string {
-  if (num === 0) return "À emporter";
-  if (num === 99) return "Livraison";
   return `Table ${num}`;
+}
+
+function getOrderTitle(order: {
+  publicCode: string | null;
+  channel: string;
+  table: { number: number } | null;
+}): string {
+  if (order.publicCode) return order.publicCode;
+  if (order.channel === "TAKEAWAY") return "À emporter";
+  if (order.channel === "DELIVERY") return "Livraison";
+  if (order.table) return getTableLabel(order.table.number);
+  return "Commande";
+}
+
+function getOrderBadge(order: {
+  publicCode: string | null;
+  table: { number: number } | null;
+}): string {
+  if (order.publicCode) return order.publicCode.replace(/^CMD-/, "");
+  if (order.table) return String(order.table.number);
+  return "—";
 }
 
 export default async function DashboardPage() {
@@ -43,7 +62,7 @@ export default async function DashboardPage() {
   const stats = [
     {
       label: "Chiffre d'affaires aujourd'hui",
-      value: `${totalSalesToday.toFixed(2)} €`,
+      value: `${totalSalesToday.toFixed(2)} DA`,
       icon: "💰",
       color: "from-primary-500 to-primary-600",
       bg: "bg-primary-50",
@@ -101,10 +120,10 @@ export default async function DashboardPage() {
               >
                 <div className="flex items-center gap-4">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 font-semibold text-primary-700">
-                    {order.table.number}
+                    {getOrderBadge(order)}
                   </span>
                   <div>
-                    <p className="font-medium text-dark-800">{getTableLabel(order.table.number)}</p>
+                    <p className="font-medium text-dark-800">{getOrderTitle(order)}</p>
                     <p className="text-sm capitalize text-dark-500">
                       {order.status.replace("_", " ").toLowerCase()}
                     </p>
