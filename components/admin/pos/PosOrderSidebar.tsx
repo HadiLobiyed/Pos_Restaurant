@@ -43,7 +43,7 @@ export function PosOrderSidebar({
 
   const subtotal = cart.reduce((s, c) => s + c.price * c.quantity, 0);
   const total = subtotal;
-  const tableNumber = tableId ? tables.find((t) => t.id === tableId)?.number : undefined;
+  const tableNumber = tableId && Array.isArray(tables) ? tables.find((t) => t.id === tableId)?.number : undefined;
 
   async function sendKot(andPrint = false) {
     if (!tableId) {
@@ -177,7 +177,7 @@ export function PosOrderSidebar({
             className="input-field flex-1 py-2 text-sm"
           >
             <option value="">— Choisir —</option>
-            {tables.map((t) => (
+            {(Array.isArray(tables) ? tables : []).map((t) => (
               <option key={t.id} value={t.id}>
                 Table {t.number} {t.reserved ? "(réservée)" : ""}
               </option>

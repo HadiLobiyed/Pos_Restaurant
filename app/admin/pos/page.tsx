@@ -42,8 +42,22 @@ export default function PosPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/menu").then((r) => r.json()).then(setMenuItems).catch(() => []),
-      fetch("/api/tables").then((r) => r.json()).then(setTables).catch(() => []),
+      fetch("/api/menu")
+        .then(async (r) => {
+          if (!r.ok) return [];
+          const data = await r.json();
+          return Array.isArray(data) ? data : [];
+        })
+        .then(setMenuItems)
+        .catch(() => setMenuItems([])),
+      fetch("/api/tables")
+        .then(async (r) => {
+          if (!r.ok) return [];
+          const data = await r.json();
+          return Array.isArray(data) ? data : [];
+        })
+        .then(setTables)
+        .catch(() => setTables([])),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -69,6 +83,7 @@ export default function PosPage() {
   }, [orderIdFromUrl, tables.length]);
 
   const categories = useMemo(() => {
+    if (!Array.isArray(menuItems)) return [];
     const map = new Map<string, string>();
     menuItems.forEach((i) => map.set(i.category.id, i.category.name));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));

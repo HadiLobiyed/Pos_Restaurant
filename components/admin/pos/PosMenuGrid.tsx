@@ -27,7 +27,7 @@ export function PosMenuGrid({
   const [categoryId, setCategoryId] = useState<string>("");
 
   const filtered = useMemo(() => {
-    let list = items;
+    let list = Array.isArray(items) ? items : [];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -65,7 +65,7 @@ export function PosMenuGrid({
           className="input-field w-auto"
         >
           <option value="">Toutes les catégories</option>
-          {categories.map((c) => (
+          {(Array.isArray(categories) ? categories : []).map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
