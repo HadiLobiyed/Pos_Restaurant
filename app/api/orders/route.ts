@@ -102,7 +102,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     if (error?.message === "TABLE_NOT_FOUND") {
-      return NextResponse.json({ error: "Table not found" }, { status: 404 });
+      return NextResponse.json({ error: "Table introuvable. Scannez le QR code de votre table." }, { status: 400 });
     }
     console.error("POST /api/orders error:", error);
     return NextResponse.json({ error: error.message ?? "Internal server error" }, { status: 500 });

@@ -46,7 +46,12 @@ export function CartDrawer({
     });
     setSubmitting(false);
     if (!res.ok) {
-      setError("Erreur. Réessayez.");
+      try {
+        const data = await res.json();
+        setError(data?.error || "Erreur. Réessayez.");
+      } catch {
+        setError(res.status === 404 ? "Table introuvable. Scannez le QR code de votre table." : "Erreur. Réessayez.");
+      }
       return;
     }
     setSuccess(true);
