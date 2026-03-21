@@ -9,6 +9,7 @@ type Table = { id: string; number: number; reserved: boolean };
 
 export function PosOrderSidebar({
   cart,
+  ticketCart,
   tables,
   orderType,
   setOrderType,
@@ -17,12 +18,22 @@ export function PosOrderSidebar({
   pax,
   setPax,
   orderNumber,
+  orderPublicCode,
+  customerName,
+  setCustomerName,
+  customerPhone,
+  setCustomerPhone,
+  customerAddress,
+  setCustomerAddress,
   onUpdateQuantity,
   onRemoveItem,
   onReset,
+  onAfterOrderCreated,
   loadedOrderId,
 }: {
   cart: PosCartItem[];
+  /** Contenu du ticket (panier actuel ou dernier envoi) */
+  ticketCart: PosCartItem[];
   tables: Table[];
   orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
   setOrderType: (t: "DINE_IN" | "TAKEAWAY" | "DELIVERY") => void;
@@ -31,9 +42,17 @@ export function PosOrderSidebar({
   pax: number;
   setPax: (n: number) => void;
   orderNumber: number;
+  orderPublicCode: string | null;
+  customerName: string;
+  setCustomerName: (v: string) => void;
+  customerPhone: string;
+  setCustomerPhone: (v: string) => void;
+  customerAddress: string;
+  setCustomerAddress: (v: string) => void;
   onUpdateQuantity: (menuItemId: string, qty: number) => void;
   onRemoveItem: (menuItemId: string) => void;
   onReset: () => void;
+  onAfterOrderCreated: (order: { publicCode?: string | null }) => void;
   loadedOrderId?: string | null;
 }) {
   const router = useRouter();
@@ -50,6 +69,12 @@ export function PosOrderSidebar({
       setMessage({ type: "error", text: "Choisissez une table." });
       return;
     }
+    if (orderType === "DELIVERY") {
+      if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
+        setMessage({ type: "error", text: "Renseignez nom, téléphone et adresse (livraison)." });
+        return;
+      }
+    }
     if (cart.length === 0) {
       setMessage({ type: "error", text: "Panier vide." });
       return;
@@ -63,6 +88,13 @@ export function PosOrderSidebar({
         body: JSON.stringify({
           channel: orderType,
           ...(tableId ? { tableId } : {}),
+          ...(orderType === "DELIVERY"
+            ? {
+                customerName: customerName.trim(),
+                customerPhone: customerPhone.trim(),
+                customerAddress: customerAddress.trim(),
+              }
+            : {}),
           items: cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity, comment: c.comment })),
         }),
       });
@@ -70,9 +102,10 @@ export function PosOrderSidebar({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Erreur envoi cuisine");
       }
+      const order = await res.json();
       setMessage({ type: "ok", text: "Commande envoyée en cuisine (KOT)." });
+      onAfterOrderCreated(order);
       if (andPrint) setTimeout(() => window.print(), 300);
-      onReset();
     } catch (e) {
       setMessage({ type: "error", text: e instanceof Error ? e.message : "Erreur" });
     } finally {
@@ -106,6 +139,12 @@ export function PosOrderSidebar({
       setMessage({ type: "error", text: "Choisissez une table." });
       return;
     }
+    if (orderType === "DELIVERY") {
+      if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
+        setMessage({ type: "error", text: "Renseignez nom, téléphone et adresse (livraison)." });
+        return;
+      }
+    }
     if (cart.length === 0) {
       setMessage({ type: "error", text: "Panier vide." });
       return;
@@ -119,6 +158,13 @@ export function PosOrderSidebar({
         body: JSON.stringify({
           channel: orderType,
           ...(tableId ? { tableId } : {}),
+          ...(orderType === "DELIVERY"
+            ? {
+                customerName: customerName.trim(),
+                customerPhone: customerPhone.trim(),
+                customerAddress: customerAddress.trim(),
+              }
+            : {}),
           items: cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity, comment: c.comment })),
         }),
       });
@@ -139,7 +185,7 @@ export function PosOrderSidebar({
         type: "ok",
         text: markPaid ? "Facture créée et marquée payée." : "Facture créée.",
       });
-      onReset();
+      onAfterOrderCreated(order);
     } catch (e) {
       setMessage({ type: "error", text: e instanceof Error ? e.message : "Erreur" });
     } finally {
@@ -176,7 +222,8 @@ export function PosOrderSidebar({
           <select
             value={tableId ?? ""}
             onChange={(e) => setTableId(e.target.value || null)}
-            className="input-field flex-1 py-2 text-sm"
+            disabled={orderType !== "DINE_IN"}
+            className="input-field flex-1 py-2 text-sm disabled:opacity-50"
           >
             <option value="">— Choisir —</option>
             {(Array.isArray(tables) ? tables : []).map((t) => (
@@ -186,6 +233,32 @@ export function PosOrderSidebar({
             ))}
           </select>
         </div>
+        {orderType === "DELIVERY" && (
+          <div className="space-y-2 rounded-xl border border-primary-200 bg-primary-50/40 p-3">
+            <p className="text-xs font-semibold text-primary-900">Livraison (sur le ticket)</p>
+            <input
+              type="text"
+              placeholder="Nom du client"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="input-field w-full py-2 text-sm"
+            />
+            <input
+              type="tel"
+              placeholder="Téléphone"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              className="input-field w-full py-2 text-sm"
+            />
+            <textarea
+              placeholder="Adresse complète"
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              rows={2}
+              className="input-field w-full py-2 text-sm resize-none"
+            />
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-dark-600">Commande #</span>
           <span className="font-semibold text-dark-800">{orderNumber}</span>
@@ -304,7 +377,7 @@ export function PosOrderSidebar({
           <button
             type="button"
             onClick={() => setShowTicket(true)}
-            disabled={cart.length === 0}
+            disabled={ticketCart.length === 0}
             className="col-span-2 rounded-xl border-2 border-dark-300 py-2.5 text-sm font-medium text-dark-700 transition hover:bg-dark-50 disabled:opacity-50"
           >
             Ticket
@@ -315,8 +388,13 @@ export function PosOrderSidebar({
       {showTicket && (
         <PosTicket
           orderNumber={orderNumber}
-          cart={cart}
+          cart={ticketCart}
           tableNumber={tableNumber}
+          orderType={orderType}
+          publicCode={orderPublicCode}
+          customerName={customerName}
+          customerPhone={customerPhone}
+          customerAddress={customerAddress}
           onClose={() => setShowTicket(false)}
           onPrint={() => window.print()}
         />

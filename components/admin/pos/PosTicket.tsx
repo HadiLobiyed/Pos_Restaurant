@@ -10,6 +10,13 @@ type PosTicketProps = {
   orderNumber: number;
   cart: PosCartItem[];
   tableNumber?: number;
+  /** Sur place / à emporter / livraison */
+  orderType?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  /** Code client CMD-xxx si commande web ou déjà créée */
+  publicCode?: string | null;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
   onClose: () => void;
   onPrint: () => void;
 };
@@ -26,7 +33,18 @@ function formatDate() {
   return `${day}/${month}/${year} ${String(h12).padStart(2, "0")}:${m} ${ampm}`;
 }
 
-export function PosTicket({ orderNumber, cart, tableNumber, onClose, onPrint }: PosTicketProps) {
+export function PosTicket({
+  orderNumber,
+  cart,
+  tableNumber,
+  orderType = "DINE_IN",
+  publicCode,
+  customerName,
+  customerPhone,
+  customerAddress,
+  onClose,
+  onPrint,
+}: PosTicketProps) {
   const subtotal = cart.reduce((s, c) => s + c.price * c.quantity, 0);
   const total = subtotal;
 
@@ -68,10 +86,34 @@ export function PosTicket({ orderNumber, cart, tableNumber, onClose, onPrint }: 
 
           <div className="mt-4 space-y-1 border-t border-dark-200 pt-4">
             <p>
-              Commande #{orderNumber}
-              {tableNumber != null && ` · Table ${tableNumber}`}
+              {publicCode ? (
+                <>
+                  N° commande <span className="font-bold">{publicCode}</span>
+                  <span className="text-dark-500"> · Ticket #{orderNumber}</span>
+                </>
+              ) : (
+                <>
+                  Commande #{orderNumber}
+                  {tableNumber != null && ` · Table ${tableNumber}`}
+                </>
+              )}
             </p>
+            {orderType === "TAKEAWAY" && !publicCode && (
+              <p className="text-dark-700">À emporter</p>
+            )}
+            {orderType === "DELIVERY" && (
+              <p className="font-semibold text-dark-800">Livraison</p>
+            )}
             <p className="text-dark-600">{formatDate()}</p>
+            {orderType === "DELIVERY" &&
+              (customerName?.trim() || customerPhone?.trim() || customerAddress?.trim()) && (
+                <div className="mt-3 space-y-1 rounded border border-dark-200 bg-dark-50/80 p-3 text-left text-xs leading-relaxed">
+                  <p className="font-semibold text-dark-900">Client</p>
+                  {customerName?.trim() && <p>{customerName.trim()}</p>}
+                  {customerPhone?.trim() && <p>Tél. {customerPhone.trim()}</p>}
+                  {customerAddress?.trim() && <p className="whitespace-pre-wrap">{customerAddress.trim()}</p>}
+                </div>
+              )}
           </div>
 
           <table className="w-full mt-4 border-collapse text-left">

@@ -39,6 +39,25 @@ export default function PosPage() {
   const [pax, setPax] = useState(1);
   const [orderNumber, setOrderNumber] = useState(() => Math.floor(Math.random() * 900) + 100);
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
+  const [orderPublicCode, setOrderPublicCode] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  /** Panier figé après envoi (ticket / impression avec code + client alors que le panier est vidé) */
+  const [lastTicketSnapshot, setLastTicketSnapshot] = useState<PosCartItem[] | null>(null);
+
+  const ticketCart = cart.length > 0 ? cart : lastTicketSnapshot ?? [];
+
+  const handleAfterOrderCreated = (order: { publicCode?: string | null }) => {
+    if (cart.length > 0) setLastTicketSnapshot([...cart]);
+    setCart([]);
+    setLoadedOrderId(null);
+    setOrderNumber(Math.floor(Math.random() * 900) + 100);
+    setPax(1);
+    if (order?.publicCode != null && String(order.publicCode).length > 0) {
+      setOrderPublicCode(String(order.publicCode));
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -69,6 +88,10 @@ export default function PosPage() {
         if (!order?.id) return;
         setLoadedOrderId(order.id);
         setTableId(order.tableId ?? null);
+        setOrderPublicCode(typeof order.publicCode === "string" ? order.publicCode : null);
+        setCustomerName(order.customerName ?? "");
+        setCustomerPhone(order.customerPhone ?? "");
+        setCustomerAddress(order.customerAddress ?? "");
         if (order.channel === "TAKEAWAY" || order.channel === "DELIVERY") {
           setOrderType(order.channel);
         }
@@ -124,6 +147,11 @@ export default function PosPage() {
     setOrderNumber(Math.floor(Math.random() * 900) + 100);
     setPax(1);
     setLoadedOrderId(null);
+    setOrderPublicCode(null);
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerAddress("");
+    setLastTicketSnapshot(null);
   };
 
   if (loading) {
@@ -150,6 +178,7 @@ export default function PosPage() {
         <div className="flex w-[400px] flex-shrink-0 flex-col border-l border-dark-200 bg-white shadow-elevated">
           <PosOrderSidebar
             cart={cart}
+            ticketCart={ticketCart}
             tables={tables}
             orderType={orderType}
             setOrderType={setOrderType}
@@ -158,9 +187,17 @@ export default function PosPage() {
             pax={pax}
             setPax={setPax}
             orderNumber={orderNumber}
+            orderPublicCode={orderPublicCode}
+            customerName={customerName}
+            setCustomerName={setCustomerName}
+            customerPhone={customerPhone}
+            setCustomerPhone={setCustomerPhone}
+            customerAddress={customerAddress}
+            setCustomerAddress={setCustomerAddress}
             onUpdateQuantity={updateCartItem}
             onRemoveItem={removeFromCart}
             onReset={resetOrder}
+            onAfterOrderCreated={handleAfterOrderCreated}
             loadedOrderId={loadedOrderId}
           />
         </div>
