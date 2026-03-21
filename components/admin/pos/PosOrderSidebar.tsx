@@ -46,7 +46,7 @@ export function PosOrderSidebar({
   const tableNumber = tableId && Array.isArray(tables) ? tables.find((t) => t.id === tableId)?.number : undefined;
 
   async function sendKot(andPrint = false) {
-    if (!tableId) {
+    if (orderType === "DINE_IN" && !tableId) {
       setMessage({ type: "error", text: "Choisissez une table." });
       return;
     }
@@ -61,7 +61,8 @@ export function PosOrderSidebar({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tableId,
+          channel: orderType,
+          ...(tableId ? { tableId } : {}),
           items: cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity, comment: c.comment })),
         }),
       });
@@ -101,7 +102,7 @@ export function PosOrderSidebar({
   }
 
   async function sendBill(markPaid: boolean) {
-    if (!tableId) {
+    if (orderType === "DINE_IN" && !tableId) {
       setMessage({ type: "error", text: "Choisissez une table." });
       return;
     }
@@ -116,7 +117,8 @@ export function PosOrderSidebar({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tableId,
+          channel: orderType,
+          ...(tableId ? { tableId } : {}),
           items: cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity, comment: c.comment })),
         }),
       });
