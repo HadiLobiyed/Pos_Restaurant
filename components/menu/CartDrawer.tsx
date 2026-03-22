@@ -58,6 +58,21 @@ export function CartDrawer({
   const total = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
   const isDelivery = orderContext.kind === "delivery";
 
+  const handleCopyCode = useCallback(async (code: string) => {
+    const ok = await copyToClipboard(code);
+    if (ok) setCodeCopied(true);
+  }, []);
+
+  useEffect(() => {
+    if (!codeCopied) return;
+    const t = setTimeout(() => setCodeCopied(false), 2500);
+    return () => clearTimeout(t);
+  }, [codeCopied]);
+
+  useEffect(() => {
+    setCodeCopied(false);
+  }, [publicCode]);
+
   async function handlePlaceOrder() {
     if (cart.length === 0) return;
     if (isDelivery) {
