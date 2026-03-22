@@ -54,9 +54,18 @@ export function CartDrawer({
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [restaurantOpen, setRestaurantOpen] = useState<boolean | null>(null);
 
   const total = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
   const isDelivery = orderContext.kind === "delivery";
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/opening-hours")
+      .then((r) => r.json())
+      .then((d) => setRestaurantOpen(d.open !== false))
+      .catch(() => setRestaurantOpen(true));
+  }, [open]);
 
   const handleCopyCode = useCallback(async (code: string) => {
     const ok = await copyToClipboard(code);
@@ -82,6 +91,19 @@ export function CartDrawer({
       }
     }
     setError("");
+    try {
+      const oh = await fetch("/api/opening-hours").then((r) => r.json());
+      if (oh.open === false) {
+        setError(
+          "Le restaurant n'est pas ouvert à cette heure-ci. Merci de revenir pendant nos heures d'ouverture."
+        );
+        setRestaurantOpen(false);
+        return;
+      }
+    } catch {
+      /* si l’API échoue, on laisse le serveur décider au POST */
+    }
+
     setSubmitting(true);
 
     const payload: Record<string, unknown> = {
@@ -275,11 +297,17 @@ export function CartDrawer({
               <span>Total</span>
               <span>{total.toFixed(2)} DA</span>
             </div>
+            {restaurantOpen === false && (
+              <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Le restaurant n&apos;est pas ouvert à cette heure-ci. Vous pourrez valider votre panier pendant nos
+                heures d&apos;ouverture.
+              </p>
+            )}
             {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
             <button
               onClick={handlePlaceOrder}
-              disabled={submitting}
-              className="btn-primary w-full py-3.5"
+              disabled={submitting || restaurantOpen === false}
+              className="btn-primary w-full py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Envoi..." : "Valider la commande"}
             </button>

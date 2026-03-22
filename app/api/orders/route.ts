@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { isRestaurantOpenNow, type WeekSchedule } from "@/lib/openingHours";
 
 const itemSchema = z.object({
   menuItemId: z.string(),
@@ -81,6 +82,26 @@ export async function POST(req: Request) {
     }
     if (items.length === 0)
       return NextResponse.json({ error: "At least one item required" }, { status: 400 });
+
+    /** Commandes publiques (menu client) uniquement — le staff POS reste autorisé hors horaires */
+    if (!session) {
+      try {
+        const settings = await prisma.restaurantSettings.findUnique({ where: { id: "default" } });
+        const schedule = (settings?.openingHours as WeekSchedule | null) ?? null;
+        const tz = process.env.RESTAURANT_TZ || "UTC";
+        if (!isRestaurantOpenNow(schedule, tz)) {
+          return NextResponse.json(
+            {
+              error:
+                "Le restaurant n'est pas ouvert à cette heure-ci. Merci de revenir pendant nos heures d'ouverture.",
+            },
+            { status: 403 }
+          );
+        }
+      } catch (e) {
+        console.warn("POST /api/orders — horaires non vérifiés (schéma ou DB)", e);
+      }
+    }
 
     const order = await prisma.$transaction(async (tx) => {
       let tableIdResolved: string | undefined = undefined;

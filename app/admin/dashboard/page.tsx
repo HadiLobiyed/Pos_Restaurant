@@ -3,6 +3,7 @@ import { startOfDay } from "date-fns";
 import Link from "next/link";
 import { DeleteOrderButton } from "@/components/admin/DeleteOrderButton";
 import { AutoRefresh } from "@/components/admin/AutoRefresh";
+import { DashboardWithTabs } from "@/components/admin/DashboardWithTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -84,15 +85,11 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-8">
+    <DashboardWithTabs>
       <AutoRefresh intervalSeconds={10} />
-      <h1 className="mb-8 text-2xl font-bold text-dark-900">Dashboard</h1>
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
         {stats.map((s) => (
-          <div
-            key={s.label}
-            className="card group overflow-hidden"
-          >
+          <div key={s.label} className="card group overflow-hidden">
             <div className={`absolute right-0 top-0 h-24 w-24 -translate-y-6 translate-x-6 rounded-full opacity-10 bg-gradient-to-br ${s.color}`} />
             <div className="relative">
               <span className={`inline-flex rounded-xl p-2.5 ${s.bg} text-2xl`}>{s.icon}</span>
@@ -143,6 +140,6 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardWithTabs>
   );
 }

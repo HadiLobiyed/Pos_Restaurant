@@ -47,6 +47,14 @@ model User {
   createdAt DateTime @default(now())
 }
 
+/// Ligne unique (id = "default") — horaires d’ouverture par jour (JSON)
+model RestaurantSettings {
+  id             String   @id @default("default")
+  /// { "0": { "closed": false, "ranges": [{ "start": "12:00", "end": "14:30" }] }, ... } clés 0=dimanche … 6=samedi
+  openingHours Json?
+  updatedAt      DateTime @updatedAt
+}
+
 model Category {
   id         String     @id @default(cuid())
   name       String
