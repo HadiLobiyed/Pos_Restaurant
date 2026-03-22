@@ -36,6 +36,59 @@ function labelOrderStatus(s: string): string {
   }
 }
 
+/** Livraison encaissée : le client voit « En livraison » plutôt que l’état cuisine seul */
+function displayGlobalStatus(data: TrackPayload): string {
+  if (data.channel === "DELIVERY" && data.paymentStatus === "PAID") {
+    if (data.status === "DONE") return "Livrée";
+    return "En livraison";
+  }
+  return labelOrderStatus(data.status);
+}
+
+function deliveryPaidSubtitle(data: TrackPayload): string | null {
+  if (data.channel !== "DELIVERY" || data.paymentStatus !== "PAID") return null;
+  if (data.status === "DONE") return "Merci de votre confiance.";
+  return "Votre commande payée est en cours de préparation ou de livraison.";
+}
+
+function TrackResultSummary({ data }: { data: TrackPayload }) {
+  const subtitle = deliveryPaidSubtitle(data);
+  return (
+    <div className="rounded-2xl border-2 border-primary-400/40 bg-white/10 p-6 backdrop-blur">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-medium text-primary-200">État global</p>
+        {data.channel === "DELIVERY" && (
+          <span className="rounded-full bg-accent-500/25 px-2.5 py-0.5 text-xs font-semibold text-accent-200">
+            Livraison
+          </span>
+        )}
+        {data.channel === "TAKEAWAY" && (
+          <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-dark-200">
+            À emporter
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-2xl font-bold text-white">{displayGlobalStatus(data)}</p>
+      {subtitle && <p className="mt-2 text-sm text-dark-300">{subtitle}</p>}
+      <div className="mt-4 grid gap-2 text-sm text-dark-200">
+        {data.tableNumber != null && (
+          <p>
+            Table : <span className="font-semibold text-white">{data.tableNumber}</span>
+          </p>
+        )}
+        {data.publicCode && (
+          <p>
+            Code : <span className="font-mono font-semibold text-white">{data.publicCode}</span>
+          </p>
+        )}
+        <p>
+          Paiement : <span className="text-white">{labelPayment(data.paymentStatus)}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function labelItemStatus(s: string): string {
   switch (s) {
     case "PENDING":
@@ -284,25 +337,7 @@ export default function SuiviCommandePage() {
 
         {step === "result" && data && (
           <div className="space-y-6">
-            <div className="rounded-2xl border-2 border-primary-400/40 bg-white/10 p-6 backdrop-blur">
-              <p className="text-sm font-medium text-primary-200">État global</p>
-              <p className="mt-1 text-2xl font-bold text-white">{labelOrderStatus(data.status)}</p>
-              <div className="mt-4 grid gap-2 text-sm text-dark-200">
-                {data.tableNumber != null && (
-                  <p>
-                    Table : <span className="font-semibold text-white">{data.tableNumber}</span>
-                  </p>
-                )}
-                {data.publicCode && (
-                  <p>
-                    Code : <span className="font-mono font-semibold text-white">{data.publicCode}</span>
-                  </p>
-                )}
-                <p>
-                  Paiement : <span className="text-white">{labelPayment(data.paymentStatus)}</span>
-                </p>
-              </div>
-            </div>
+            <TrackResultSummary data={data} />
 
             <div className="rounded-2xl border-2 border-white/20 bg-white/10 p-6 backdrop-blur">
               <h2 className="mb-4 text-lg font-bold text-white">Votre commande</h2>
