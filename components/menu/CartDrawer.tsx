@@ -1,7 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CartItem } from "./MenuClient";
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
 
 export type OrderContext =
   | { kind: "table"; tableId: string }
@@ -28,6 +49,7 @@ export function CartDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [publicCode, setPublicCode] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [error, setError] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -117,7 +139,43 @@ export function CartDrawer({
               {publicCode ? (
                 <div className="rounded-2xl border-2 border-primary-200 bg-primary-50 p-6">
                   <p className="text-sm text-dark-600 mb-2">Votre numéro de commande</p>
-                  <p className="text-3xl font-bold tracking-wider text-primary-700">{publicCode}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(publicCode)}
+                    className="group w-full rounded-xl bg-white/80 px-3 py-3 transition hover:bg-white"
+                    title="Cliquer pour copier"
+                  >
+                    <p className="text-3xl font-bold tracking-wider text-primary-700">{publicCode}</p>
+                    <p className="mt-1 text-xs text-primary-600/80">Appuyez pour copier dans le presse-papiers</p>
+                  </button>
+                  <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCode(publicCode)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition hover:bg-primary-50"
+                    >
+                      {codeCopied ? (
+                        <>
+                          <svg className="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Copié !
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-4 w-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                          Copier
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <p className="mt-3 text-xs text-dark-500">Présentez ce code au comptoir.</p>
                 </div>
               ) : (
