@@ -39,7 +39,7 @@ function labelOrderStatus(s: string): string {
 /** Livraison encaissée : le client voit « En livraison » plutôt que l’état cuisine seul */
 function displayGlobalStatus(data: TrackPayload): string {
   if (data.channel === "DELIVERY" && data.paymentStatus === "PAID") {
-    if (data.status === "DONE") return "Livrée";
+    if (data.status === "DONE") return "En Livraison";
     return "En livraison";
   }
   return labelOrderStatus(data.status);
