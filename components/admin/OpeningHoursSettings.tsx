@@ -5,15 +5,22 @@ import {
   WEEKDAY_LABELS_FR,
   emptyWeekSchedule,
   type DayRange,
+  type DaySchedule,
   type WeekSchedule,
 } from "@/lib/openingHours";
 
-function updateDay(
-  schedule: WeekSchedule,
-  dayKey: string,
-  updater: (d: { closed: boolean; ranges: DayRange[] }) => { closed: boolean; ranges: DayRange[] }
-): WeekSchedule {
-  const cur = schedule[dayKey] ?? { closed: false, ranges: [] };
+type DayState = { closed: boolean; ranges: DayRange[] };
+
+function toDayState(d: DaySchedule | undefined): DayState {
+  if (!d) return { closed: false, ranges: [] };
+  return {
+    closed: d.closed === true,
+    ranges: Array.isArray(d.ranges) ? d.ranges : [],
+  };
+}
+
+function updateDay(schedule: WeekSchedule, dayKey: string, updater: (d: DayState) => DayState): WeekSchedule {
+  const cur = toDayState(schedule[dayKey]);
   return { ...schedule, [dayKey]: updater(cur) };
 }
 
