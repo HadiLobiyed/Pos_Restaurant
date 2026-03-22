@@ -11,22 +11,39 @@ export async function GET(req: Request) {
   }
 
   const [y, mo, d] = dateStr.split("-").map(Number);
+  if (!y || mo < 1 || mo > 12 || d < 1 || d > 31) {
+    return NextResponse.json({ error: "Date invalide." }, { status: 400 });
+  }
   const picked = new Date(y, mo - 1, d);
+  picked.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (picked < today) {
+  if (picked.getTime() < today.getTime()) {
     return NextResponse.json({ error: "Date passée." }, { status: 400 });
   }
 
   try {
     const slots = generateAllSlotTimes();
-    const existing = await prisma.tableReservation.findMany({
-      where: { reservationDate: dateStr, reservationTime: { not: null } },
-      select: { reservationTime: true },
-    });
+
+    let existing: { reservationTime: string | null }[] = [];
+    try {
+      existing = await prisma.tableReservation.findMany({
+        where: { reservationDate: dateStr, reservationTime: { not: null } },
+        select: { reservationTime: true },
+      });
+    } catch (dbErr) {
+      // Souvent : colonnes `reservationDate` / `reservationTime` absentes → lancer `npx prisma db push`
+      console.error(
+        "GET /api/reservations/availability — requête réservations (schéma DB à jour ?)",
+        dbErr
+      );
+      existing = [];
+    }
+
     const countMap = new Map<string, number>();
     for (const r of existing) {
-      const t = r.reservationTime as string;
+      if (r.reservationTime == null) continue;
+      const t = r.reservationTime;
       countMap.set(t, (countMap.get(t) ?? 0) + 1);
     }
 
