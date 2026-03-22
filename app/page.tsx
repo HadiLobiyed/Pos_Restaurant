@@ -28,6 +28,12 @@ export default function HomePage() {
             Commander
           </Link>
           <Link
+            href="/suivi"
+            className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-accent-400/60 bg-accent-500/15 px-8 py-4 font-semibold text-accent-200 backdrop-blur-sm transition hover:border-accent-300 hover:bg-accent-500/25"
+          >
+            Suivi de commande
+          </Link>
+          <Link
             href="/reserver"
             className="group flex items-center justify-center gap-2 rounded-2xl border-2 border-white/40 bg-white/10 px-8 py-4 font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
           >

@@ -8,7 +8,14 @@ export default function CommanderPage() {
           ← Retour à l&apos;accueil
         </Link>
         <h1 className="mb-2 text-3xl font-bold text-white">Commander</h1>
-        <p className="mb-10 text-dark-300">Choisissez comment vous souhaitez recevoir votre commande.</p>
+        <p className="mb-6 text-dark-300">Choisissez comment vous souhaitez recevoir votre commande.</p>
+
+        <Link
+          href="/suivi"
+          className="mb-10 flex w-full items-center justify-center rounded-2xl border-2 border-primary-400/50 bg-primary-500/20 px-6 py-4 text-center font-semibold text-primary-100 transition hover:border-primary-300 hover:bg-primary-500/30"
+        >
+          Suivre une commande déjà passée
+        </Link>
 
         <div className="space-y-4">
           <Link
