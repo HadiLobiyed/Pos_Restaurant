@@ -70,6 +70,9 @@ const config: Config = {
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",
         "slide-up": "slideUp 0.3s ease-out",
+        "hero-reveal": "heroReveal 1.1s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "hero-kenburns": "heroKenburns 22s ease-in-out infinite alternate",
+        "hero-glow-pulse": "heroGlowPulse 5s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -79,6 +82,24 @@ const config: Config = {
         slideUp: {
           "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        heroReveal: {
+          "0%": { filter: "blur(10px)", transform: "scale(0.96) translateY(12px)" },
+          "100%": { filter: "blur(0)", transform: "scale(1) translateY(0)" },
+        },
+        heroKenburns: {
+          "0%": { transform: "scale(1) translate(0, 0)" },
+          "100%": { transform: "scale(1.12) translate(-2%, -1%)" },
+        },
+        heroGlowPulse: {
+          "0%, 100%": {
+            boxShadow:
+              "0 0 0 1px rgba(255,255,255,0.12), 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 60px -15px rgba(34, 197, 94, 0.35)",
+          },
+          "50%": {
+            boxShadow:
+              "0 0 0 1px rgba(251, 146, 60, 0.35), 0 30px 60px -12px rgba(0,0,0,0.55), 0 0 80px -10px rgba(251, 146, 60, 0.45)",
+          },
         },
       },
     },
