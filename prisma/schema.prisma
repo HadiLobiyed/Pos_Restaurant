@@ -95,14 +95,20 @@ model Order {
 }
 
 model TableReservation {
-  id             String   @id @default(cuid())
-  name           String
-  phone          String
-  people         Int
-  preferredDate  String?
-  message        String?
-  createdAt      DateTime @default(now())
-  handled        Boolean  @default(false)
+  id               String   @id @default(cuid())
+  name             String
+  phone            String
+  people           Int
+  /// Ancien champ libre (avant date/heure structurées)
+  preferredDate    String?
+  /// Date de réservation YYYY-MM-DD (obligatoire pour les nouvelles demandes)
+  reservationDate  String?
+  /// Créneau HH:mm (aligné sur les plages du restaurant)
+  reservationTime  String?
+  message          String?
+  createdAt        DateTime @default(now())
+  /// Traitée par l’équipe (masque le badge « nouvelle »)
+  handled          Boolean  @default(false)
 }
 
 model OrderItem {

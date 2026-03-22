@@ -67,8 +67,15 @@ export function KitchenOrderCard({
     if (res.ok) onStatusUpdated();
   }
 
+  const cardSurface =
+    displayStatus === "PENDING"
+      ? "border-dark-200 bg-white"
+      : displayStatus === "IN_PROGRESS"
+        ? "border-amber-200/70 bg-gradient-to-br from-stone-50 via-amber-50/45 to-yellow-50/90"
+        : "border-dark-200 bg-white";
+
   return (
-    <div className="card overflow-hidden p-0">
+    <div className={`overflow-hidden rounded-2xl border shadow-card p-0 ${cardSurface}`}>
       <div className="flex items-center justify-between border-b border-dark-100 bg-dark-50/50 p-4">
         <span className="text-lg font-bold text-dark-900">{kitchenOrderHeadline(order)}</span>
         <span className={`rounded-lg px-2.5 py-1 text-xs font-medium ${statusColor}`}>
