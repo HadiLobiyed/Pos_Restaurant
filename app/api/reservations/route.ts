@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { isValidSlot, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reservationSlots";
+import { generateSlotTimesForDate, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reservationSlots";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -25,7 +25,16 @@ export async function POST(req: Request) {
     }
 
     const { reservationDate, reservationTime } = parsed.data;
-    if (!isValidSlot(reservationTime)) {
+    const tz = process.env.RESTAURANT_TZ || "UTC";
+    let openingHours: unknown = null;
+    try {
+      const row = await prisma.restaurantSettings.findUnique({ where: { id: "default" } });
+      openingHours = row?.openingHours ?? null;
+    } catch (e) {
+      console.warn("POST /api/reservations — openingHours introuvables.", e);
+    }
+    const allowedSlots = generateSlotTimesForDate(reservationDate, openingHours as any, tz);
+    if (!allowedSlots.includes(reservationTime)) {
       return NextResponse.json({ error: "Créneau horaire invalide." }, { status: 400 });
     }
 

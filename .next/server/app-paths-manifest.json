@@ -1,1 +1,11 @@
-{}
+{
+  "/page": "app/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/commander/page": "app/commander/page.js",
+  "/menu/page": "app/menu/page.js",
+  "/api/menu/route": "app/api/menu/route.js",
+  "/api/orders/route": "app/api/orders/route.js",
+  "/suivi/page": "app/suivi/page.js",
+  "/api/orders/track/route": "app/api/orders/track/route.js"
+}

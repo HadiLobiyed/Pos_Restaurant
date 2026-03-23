@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateAllSlotTimes, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reservationSlots";
+import { generateSlotTimesForDate, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reservationSlots";
 
 /** Créneaux disponibles pour une date (YYYY-MM-DD) — public */
 export async function GET(req: Request) {
@@ -23,7 +23,16 @@ export async function GET(req: Request) {
   }
 
   try {
-    const slots = generateAllSlotTimes();
+    const tz = process.env.RESTAURANT_TZ || "UTC";
+    let openingHours: unknown = null;
+    try {
+      const row = await prisma.restaurantSettings.findUnique({ where: { id: "default" } });
+      openingHours = row?.openingHours ?? null;
+    } catch (e) {
+      console.warn("GET /api/reservations/availability — openingHours introuvables.", e);
+    }
+
+    const slots = generateSlotTimesForDate(dateStr, openingHours as any, tz);
 
     let existing: { reservationTime: string | null }[] = [];
     try {

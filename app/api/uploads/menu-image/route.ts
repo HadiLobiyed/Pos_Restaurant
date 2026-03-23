@@ -1,17 +1,27 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { createClient } from "@supabase/supabase-js";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 
 export const runtime = "nodejs";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // 🔥 important
-);
-
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function extFromMime(mime: string) {
+  switch (mime) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    default:
+      return null;
+  }
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -19,32 +29,35 @@ export async function POST(req: Request) {
 
   const formData = await req.formData();
   const file = formData.get("file");
-
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
   }
 
   if (!ALLOWED_MIME.has(file.type)) {
-    return NextResponse.json({ error: "Unsupported file type" }, { status: 415 });
+    return NextResponse.json(
+      { error: "Unsupported file type", allowed: Array.from(ALLOWED_MIME) },
+      { status: 415 }
+    );
   }
 
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "File too large" }, { status: 413 });
+    return NextResponse.json({ error: "File too large", maxBytes: MAX_BYTES }, { status: 413 });
   }
 
-  const fileName = `${Date.now()}-${file.name}`;
+  const ext = extFromMime(file.type);
+  if (!ext) return NextResponse.json({ error: "Unsupported file type" }, { status: 415 });
 
-  const { error } = await supabase.storage
-    .from("products") // ⚠️ ton bucket
-    .upload(fileName, file);
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  const uploadsDir = path.join(process.cwd(), "public", "uploads", "menu");
+  await mkdir(uploadsDir, { recursive: true });
 
-  const { data } = supabase.storage
-    .from("products")
-    .getPublicUrl(fileName);
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const absPath = path.join(uploadsDir, filename);
+  await writeFile(absPath, buffer);
 
-  return NextResponse.json({ path: data.publicUrl });
+  const publicPath = `/uploads/menu/${filename}`;
+  return NextResponse.json({ path: publicPath });
 }
+
