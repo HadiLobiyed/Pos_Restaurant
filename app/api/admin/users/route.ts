@@ -51,3 +51,22 @@ export async function POST(req: Request) {
   }
 }
 
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const role = session.user?.role ?? "STAFF";
+  if (role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    });
+    return NextResponse.json(users);
+  } catch (e) {
+    console.error("GET /api/admin/users", e);
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  }
+}
+

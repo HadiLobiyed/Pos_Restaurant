@@ -14,7 +14,7 @@ const links: Array<{
 }> = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/admin/pos", label: "POS", icon: "🖥️" },
-  { href: "/admin/sales", label: "Ventes", icon: "💰", adminOnly: true },
+  { href: "/admin/sales", label: "Ventes", icon: "💰" },
   { href: "/admin/menu", label: "Menu", icon: "📋" },
   { href: "/admin/tables", label: "Tables", icon: "🪑" },
   { href: "/admin/reservations", label: "Réservations", icon: "📅", badge: "pendingReservations" },

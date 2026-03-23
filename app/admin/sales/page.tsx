@@ -13,8 +13,7 @@ export default async function SalesPage({
   searchParams: { date?: string };
 }) {
   const session = await getServerSession(authOptions);
-  const role = session?.user?.role ?? "STAFF";
-  if (role !== "ADMIN") redirect("/admin/dashboard");
+  // STAFF doit aussi pouvoir accéder à cette page (POS + ventes).
 
   const { date } = searchParams ?? {};
   const selectedDate = date ? new Date(date) : new Date();
