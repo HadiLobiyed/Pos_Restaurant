@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 const links: Array<{
@@ -10,19 +10,24 @@ const links: Array<{
   label: string;
   icon: string;
   badge?: "pendingReservations";
+  adminOnly?: boolean;
 }> = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/admin/pos", label: "POS", icon: "🖥️" },
-  { href: "/admin/sales", label: "Ventes", icon: "💰" },
+  { href: "/admin/sales", label: "Ventes", icon: "💰", adminOnly: true },
   { href: "/admin/menu", label: "Menu", icon: "📋" },
   { href: "/admin/tables", label: "Tables", icon: "🪑" },
   { href: "/admin/reservations", label: "Réservations", icon: "📅", badge: "pendingReservations" },
   { href: "/admin/kitchen", label: "Cuisine", icon: "👨‍🍳" },
+  { href: "/admin/users", label: "Utilisateurs", icon: "👤", adminOnly: true },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const [pendingReservations, setPendingReservations] = useState<number | null>(null);
+  const { data: session } = useSession();
+  const role = session?.user?.role ?? "STAFF";
+  const isAdmin = role === "ADMIN";
 
   useEffect(() => {
     async function load() {
@@ -52,6 +57,7 @@ export function AdminSidebar() {
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {links.map((link) => {
+          if (link.adminOnly === true && !isAdmin) return null;
           const showBadge =
             link.badge === "pendingReservations" && pendingReservations != null && pendingReservations > 0;
           return (

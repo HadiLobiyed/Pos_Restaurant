@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { OpeningHoursSettings } from "@/components/admin/OpeningHoursSettings";
 
-export function DashboardWithTabs({ children }: { children: React.ReactNode }) {
+export function DashboardWithTabs({
+  children,
+  canManageHours,
+}: {
+  children: React.ReactNode;
+  canManageHours: boolean;
+}) {
   const [tab, setTab] = useState<"overview" | "hours">("overview");
+  const showHoursTab = canManageHours === true;
 
   return (
     <div className="p-8">
@@ -22,20 +29,22 @@ export function DashboardWithTabs({ children }: { children: React.ReactNode }) {
         >
           Vue d&apos;ensemble
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("hours")}
-          className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
-            tab === "hours"
-              ? "border-primary-500 text-primary-700"
-              : "border-transparent text-dark-500 hover:text-dark-800"
-          }`}
-        >
-          Horaires d&apos;ouverture
-        </button>
+        {showHoursTab && (
+          <button
+            type="button"
+            onClick={() => setTab("hours")}
+            className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+              tab === "hours"
+                ? "border-primary-500 text-primary-700"
+                : "border-transparent text-dark-500 hover:text-dark-800"
+            }`}
+          >
+            Horaires d&apos;ouverture
+          </button>
+        )}
       </div>
 
-      {tab === "overview" ? children : <OpeningHoursSettings />}
+      {tab === "hours" && showHoursTab ? <OpeningHoursSettings /> : children}
     </div>
   );
 }

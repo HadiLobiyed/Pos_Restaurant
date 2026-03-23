@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { SalesFilters } from "@/components/admin/SalesFilters";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +12,10 @@ export default async function SalesPage({
 }: {
   searchParams: { date?: string };
 }) {
+  const session = await getServerSession(authOptions);
+  const role = session?.user?.role ?? "STAFF";
+  if (role !== "ADMIN") redirect("/admin/dashboard");
+
   const { date } = searchParams ?? {};
   const selectedDate = date ? new Date(date) : new Date();
   const dayStart = startOfDay(selectedDate);

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { DeleteOrderButton } from "@/components/admin/DeleteOrderButton";
 import { AutoRefresh } from "@/components/admin/AutoRefresh";
 import { DashboardWithTabs } from "@/components/admin/DashboardWithTabs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,10 @@ function getOrderBadge(order: {
 }
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  const role = session?.user?.role ?? "STAFF";
+  const canManageHours = role === "ADMIN";
+
   const today = startOfDay(new Date());
   const endOfToday = new Date(today);
   endOfToday.setHours(23, 59, 59, 999);
@@ -85,7 +91,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <DashboardWithTabs>
+    <DashboardWithTabs canManageHours={canManageHours}>
       <AutoRefresh intervalSeconds={10} />
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
         {stats.map((s) => (
