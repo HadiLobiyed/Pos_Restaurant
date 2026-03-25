@@ -48,18 +48,7 @@ body {
     size: 80mm auto;
     margin: 0;
   }
-
-  /* On n'affiche QUE le ticket en impression :
-     - évite les pages vides
-     - évite les duplications liées au layout global */
-  body * {
-    visibility: hidden !important;
-  }
-  .ticket-modal-container,
-  .ticket-modal-container * {
-    visibility: visible !important;
-  }
-
+  
   .ticket-modal-container {
     position: static !important;
     top: auto !important;
@@ -71,7 +60,7 @@ body {
     max-width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     overflow: visible !important;
