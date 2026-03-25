@@ -59,7 +59,7 @@ export function PosTicket({
   }, []);
 
   return (
-    <div className="ticket-modal-container fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:!fixed print:!top-0 print:!left-0 print:!right-auto print:!inset-auto print:!flex print:!justify-start print:!items-start print:bg-white print:p-0">
+    <div className="ticket-modal-container fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
         <div className="p-4 border-b border-dark-200 flex justify-between items-center print:hidden">
           <h3 className="font-semibold text-dark-800">Ticket</h3>

@@ -45,6 +45,7 @@ body {
 /* Impression ticket : en haut à gauche, format ticket */
 @media print {
   @page {
+    size: 80mm auto;
     margin: 0;
   }
   body.ticket-modal-open * {
@@ -56,9 +57,9 @@ body {
     visibility: visible;
   }
   body.ticket-modal-open .ticket-modal-container {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
     right: auto !important;
     bottom: auto !important;
     display: block !important;
@@ -69,6 +70,9 @@ body {
     background: white !important;
     border: none !important;
     box-shadow: none !important;
+  }
+  body.ticket-modal-open .ticket-modal-container .ticket-content-print {
+    page-break-inside: avoid;
   }
   body.ticket-modal-open .ticket-modal-container > div {
     width: 80mm !important;
