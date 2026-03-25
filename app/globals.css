@@ -48,20 +48,25 @@ body {
     size: 80mm auto;
     margin: 0;
   }
-  /* Masquer le reste sans casser le layout du ticket */
-  body.ticket-modal-open * {
+
+  /* On n'affiche QUE le ticket en impression :
+     - évite les pages vides
+     - évite les duplications liées au layout global */
+  body * {
     visibility: hidden !important;
   }
-  body.ticket-modal-open .ticket-modal-container,
-  body.ticket-modal-open .ticket-modal-container * {
+  .ticket-modal-container,
+  .ticket-modal-container * {
     visibility: visible !important;
   }
-  body.ticket-modal-open .ticket-modal-container {
+
+  .ticket-modal-container {
     position: static !important;
     top: auto !important;
     left: auto !important;
     right: auto !important;
     bottom: auto !important;
+    display: block !important;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 !important;
@@ -72,15 +77,17 @@ body {
     overflow: visible !important;
     page-break-after: avoid !important;
   }
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print {
+
+  .ticket-content-print {
     width: 80mm !important;
     max-width: 80mm !important;
     padding: 0.5rem !important;
     border: none !important;
-    page-break-inside: avoid;
-    page-break-after: avoid;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
   }
-  body.ticket-modal-open .ticket-modal-container > div {
+
+  .ticket-modal-container > div {
     width: 80mm !important;
     max-width: 80mm !important;
     border: none !important;
