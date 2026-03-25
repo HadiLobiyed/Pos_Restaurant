@@ -140,15 +140,16 @@ export async function POST(req: Request) {
       });
 
       const dataWithSupps = items.map((i) => {
-        const data: Record<string, unknown> = {
+        return {
           orderId: newOrder.id,
           menuItemId: i.menuItemId,
           quantity: i.quantity,
           comment: i.comment ?? null,
-        };
-        // On n'insère `supplements` que s'il est présent.
-        if (i.supplements !== undefined) data.supplements = i.supplements;
-        return data;
+          // Prisma ne connaît pas forcément ce champ (selon ta migration).
+          // On le garde ici pour le cas où la colonne existe : le `as unknown as ...`
+          // permet de passer la compilation, puis on gère l'absence de colonne au runtime.
+          ...(i.supplements !== undefined ? { supplements: i.supplements } : {}),
+        } as unknown;
       });
 
       const dataWithoutSupps = items.map((i) => ({
@@ -156,10 +157,14 @@ export async function POST(req: Request) {
         menuItemId: i.menuItemId,
         quantity: i.quantity,
         comment: i.comment ?? null,
-      }));
+      })) as unknown as Prisma.OrderItemCreateManyInput[];
+
+      // Corrige le type Prisma attendu par `createMany`.
+      // Si `supplements` n'existe pas en DB, le catch ci-dessous repassera sur `dataWithoutSupps`.
+      const dataWithSuppsTyped = dataWithSupps as unknown as Prisma.OrderItemCreateManyInput[];
 
       try {
-        await tx.orderItem.createMany({ data: dataWithSupps });
+        await tx.orderItem.createMany({ data: dataWithSuppsTyped });
       } catch (e: any) {
         const msg = String(e?.message ?? "").toLowerCase();
         // Si la colonne n'existe pas encore en base, on repasse sans `supplements`

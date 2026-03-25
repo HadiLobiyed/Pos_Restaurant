@@ -1,4 +1,4 @@
-// File: C:\Users\MSI1\Desktop\saas_restaurant\app\admin\kitchen\page.tsx
+// File: C:\Users\engel\OneDrive\Documents\GitHub\Pos_Restaurant\app\admin\kitchen\page.tsx
 import * as entry from '../../../../../app/admin/kitchen/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

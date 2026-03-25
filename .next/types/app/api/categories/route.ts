@@ -1,4 +1,4 @@
-// File: C:\Users\MSI1\Desktop\saas_restaurant\app\api\categories\route.ts
+// File: C:\Users\engel\OneDrive\Documents\GitHub\Pos_Restaurant\app\api\categories\route.ts
 import * as entry from '../../../../../app/api/categories/route.js'
 import type { NextRequest } from 'next/server.js'
 
