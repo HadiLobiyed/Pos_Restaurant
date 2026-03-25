@@ -46,7 +46,7 @@ body {
 @media print {
   @page {
     /* Format ticket (évite les pages fantômes sur certains drivers) */
-    size: 80mm 200mm;
+    size: 80mm auto;
     margin: 0;
   }
 
@@ -62,8 +62,11 @@ body {
 
   .ticket-modal-container {
     /* Important: éviter `fixed` en impression → peut dupliquer / ajouter des pages */
-    position: static !important;
-    inset: auto !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
     display: block !important;
     width: 80mm !important;
     max-width: 80mm !important;
