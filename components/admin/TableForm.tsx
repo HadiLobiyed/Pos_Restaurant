@@ -60,7 +60,7 @@ export function TableForm({
               disabled={loading}
               className="btn-primary"
             >
-              Créer
+              Créerer
             </button>
           </div>
         </form>
