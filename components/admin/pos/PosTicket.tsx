@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import type { PosCartItem } from "@/app/admin/pos/page";
 
 const RESTAURANT_NAME = "Restaurant POS";
@@ -58,6 +58,13 @@ export function PosTicket({
     return () => document.body.classList.remove("ticket-modal-open");
   }, []);
 
+  const handlePrint = useCallback(() => {
+    // Sécurité : certains navigateurs/drivers démarrent l’impression
+    // avant que les effets soient appliqués. On force la classe ici.
+    document.body.classList.add("ticket-modal-open");
+    onPrint();
+  }, [onPrint]);
+
   return (
     <div className="ticket-modal-container fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
@@ -66,7 +73,7 @@ export function PosTicket({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={onPrint}
+              onClick={handlePrint}
               className="px-3 py-1.5 rounded bg-primary-500 text-white text-sm font-medium hover:bg-primary-600"
             >
               Imprimer
