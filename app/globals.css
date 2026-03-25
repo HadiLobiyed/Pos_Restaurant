@@ -48,14 +48,12 @@ body {
     size: 80mm auto;
     margin: 0;
   }
-  /* Masquer tout sauf le ticket : avec `visibility:hidden` le layout reste et peut créer une 2ème page vide */
+  /* Masquer le reste sans casser le layout du ticket */
   body.ticket-modal-open * {
-    display: none !important;
     visibility: hidden !important;
   }
   body.ticket-modal-open .ticket-modal-container,
   body.ticket-modal-open .ticket-modal-container * {
-    display: block !important;
     visibility: visible !important;
   }
   body.ticket-modal-open .ticket-modal-container {
@@ -71,6 +69,8 @@ body {
     background: white !important;
     border: none !important;
     box-shadow: none !important;
+    overflow: visible !important;
+    page-break-after: avoid !important;
   }
   body.ticket-modal-open .ticket-modal-container .ticket-content-print {
     width: 80mm !important;
@@ -78,6 +78,7 @@ body {
     padding: 0.5rem !important;
     border: none !important;
     page-break-inside: avoid;
+    page-break-after: avoid;
   }
   body.ticket-modal-open .ticket-modal-container > div {
     width: 80mm !important;
