@@ -42,12 +42,27 @@ export async function PATCH(
   if (parsed.data.stock !== undefined) data.stock = parsed.data.stock;
   if (parsed.data.barcode !== undefined) data.barcode = parsed.data.barcode;
   if (parsed.data.supplements !== undefined) data.supplements = { deleteMany: {}, create: parsed.data.supplements };
-  const item = await prisma.menuItem.update({
-    where: { id },
-    data,
-    include: { category: true, supplements: true },
-  });
-  return NextResponse.json(item);
+
+  try {
+    const item = await prisma.menuItem.update({
+      where: { id },
+      data,
+      include: { category: true, supplements: true },
+    });
+    return NextResponse.json(item);
+  } catch (err) {
+    // Si la relation supplements n'existe pas encore en base, on renvoie l'item sans inclure les suppléments.
+    console.warn("PATCH /api/menu/[id] — fallback sans supplements", err);
+    const dataWithoutSupps = { ...data } as any;
+    if (dataWithoutSupps.supplements !== undefined) delete dataWithoutSupps.supplements;
+
+    const item = await prisma.menuItem.update({
+      where: { id },
+      data: dataWithoutSupps,
+      include: { category: true },
+    });
+    return NextResponse.json(item);
+  }
 }
 
 export async function DELETE(

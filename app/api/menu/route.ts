@@ -21,20 +21,41 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const publicMenu = searchParams.get("public") === "true";
     if (publicMenu) {
+      try {
+        const items = await prisma.menuItem.findMany({
+          where: { visible: true },
+          include: { category: true, supplements: true },
+          orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+        });
+        return NextResponse.json(items);
+      } catch (err) {
+        // Si la table/colonne relationnelle supplements est absente côté DB,
+        // on retente sans supplements pour ne pas casser l'affichage du menu.
+        console.warn("GET /api/menu (public) — fallback sans supplements", err);
+        const items = await prisma.menuItem.findMany({
+          where: { visible: true },
+          include: { category: true },
+          orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+        });
+        return NextResponse.json(items);
+      }
+    }
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    try {
       const items = await prisma.menuItem.findMany({
-        where: { visible: true },
         include: { category: true, supplements: true },
         orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
       });
       return NextResponse.json(items);
+    } catch (err) {
+      console.warn("GET /api/menu — fallback sans supplements", err);
+      const items = await prisma.menuItem.findMany({
+        include: { category: true },
+        orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+      });
+      return NextResponse.json(items);
     }
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const items = await prisma.menuItem.findMany({
-      include: { category: true, supplements: true },
-      orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
-    });
-    return NextResponse.json(items);
   } catch (err: any) {
     console.error("GET /api/menu error:", err);
     return NextResponse.json({ error: "Database error. Check DATABASE_URL (use Supabase pooler on Vercel)." }, { status: 500 });
