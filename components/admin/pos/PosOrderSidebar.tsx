@@ -60,7 +60,12 @@ export function PosOrderSidebar({
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
 
-  const subtotal = cart.reduce((s, c) => s + c.price * c.quantity, 0);
+  const subtotal = cart.reduce((s, c) => {
+    const supSum = Array.isArray(c.selectedSupplements)
+      ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
+      : 0;
+    return s + (c.price + supSum) * c.quantity;
+  }, 0);
   const total = subtotal;
   const tableNumber = tableId && Array.isArray(tables) ? tables.find((t) => t.id === tableId)?.number : undefined;
 
@@ -95,7 +100,15 @@ export function PosOrderSidebar({
                 customerAddress: customerAddress.trim(),
               }
             : {}),
-          items: cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity, comment: c.comment })),
+          items: cart.map((c) => ({
+            menuItemId: c.menuItemId,
+            quantity: c.quantity,
+            comment: c.comment,
+            supplements:
+              Array.isArray(c.selectedSupplements) && c.selectedSupplements.length > 0
+                ? c.selectedSupplements.map((s) => ({ name: s.name, price: s.price }))
+                : undefined,
+          })),
         }),
       });
       if (!res.ok) {
@@ -165,7 +178,15 @@ export function PosOrderSidebar({
                 customerAddress: customerAddress.trim(),
               }
             : {}),
-          items: cart.map((c) => ({ menuItemId: c.menuItemId, quantity: c.quantity, comment: c.comment })),
+          items: cart.map((c) => ({
+            menuItemId: c.menuItemId,
+            quantity: c.quantity,
+            comment: c.comment,
+            supplements:
+              Array.isArray(c.selectedSupplements) && c.selectedSupplements.length > 0
+                ? c.selectedSupplements.map((s) => ({ name: s.name, price: s.price }))
+                : undefined,
+          })),
         }),
       });
       if (!res.ok) {
@@ -293,7 +314,21 @@ export function PosOrderSidebar({
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-dark-800">{c.name}</p>
-                  <p className="text-dark-500">{(c.price * c.quantity).toFixed(2)} DA</p>
+                  {Array.isArray(c.selectedSupplements) && c.selectedSupplements.length > 0 ? (
+                    <p className="text-[11px] text-dark-500 mt-0.5 truncate">
+                      + {c.selectedSupplements.map((s) => s.name).join(", ")}
+                    </p>
+                  ) : null}
+                  <p className="text-dark-500">
+                    {(
+                      (c.price +
+                        (Array.isArray(c.selectedSupplements)
+                          ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
+                          : 0)) *
+                      c.quantity
+                    ).toFixed(2)}{" "}
+                    DA
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
                   <button

@@ -13,6 +13,7 @@ const createSchema = z.object({
   visible: z.boolean().optional(),
   stock: z.number().int().min(0).nullable().optional(),
   barcode: z.string().optional().nullable(),
+  supplements: z.array(z.object({ name: z.string(), price: z.number() })).optional(),
 });
 
 export async function GET(req: Request) {
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
     if (publicMenu) {
       const items = await prisma.menuItem.findMany({
         where: { visible: true },
-        include: { category: true },
+        include: { category: true, supplements: true },
         orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
       });
       return NextResponse.json(items);
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const items = await prisma.menuItem.findMany({
-      include: { category: true },
+      include: { category: true, supplements: true },
       orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
     });
     return NextResponse.json(items);
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
     price: typeof body.price === "string" ? parseFloat(body.price) : body.price,
     stock: body.stock === "" || body.stock === undefined ? null : typeof body.stock === "string" ? parseInt(body.stock, 10) : body.stock,
     barcode: body.barcode === "" ? null : body.barcode,
+    supplements: body.supplements ? body.supplements.map((s: any) => ({ ...s, price: parseFloat(s.price) })) : undefined,
   });
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   try {
@@ -62,8 +64,9 @@ export async function POST(req: Request) {
         visible: parsed.data.visible ?? true,
         stock: parsed.data.stock ?? null,
         barcode: parsed.data.barcode ?? null,
+        supplements: parsed.data.supplements ? { create: parsed.data.supplements } : undefined,
       },
-      include: { category: true },
+      include: { category: true, supplements: true },
     });
     return NextResponse.json(item);
   } catch (err: any) {

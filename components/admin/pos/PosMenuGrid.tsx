@@ -12,6 +12,7 @@ type MenuItem = {
   categoryId: string;
   stock: number | null;
   category: { id: string; name: string };
+  supplements?: Array<{ id: string; name: string; price: { toString(): string } }>;
 };
 
 export function PosMenuGrid({

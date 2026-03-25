@@ -9,6 +9,7 @@ type OrderItemType = {
   comment: string | null;
   status: string;
   menuItem: { name: string; category: { name: string } };
+  supplements?: Array<{ id?: string; name: string; price?: number }>;
 };
 
 type OrderType = {
@@ -103,6 +104,11 @@ export function KitchenOrderCard({
                 </span>
                 {oi.comment && (
                   <span className="mt-0.5 block text-xs text-amber-700">Note : {oi.comment}</span>
+                )}
+                {Array.isArray(oi.supplements) && oi.supplements.length > 0 && (
+                  <span className="mt-0.5 block text-xs text-primary-800">
+                    Suppléments : {oi.supplements.map((s) => s.name).join(", ")}
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-1">

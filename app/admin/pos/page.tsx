@@ -11,7 +11,11 @@ export type PosCartItem = {
   price: number;
   quantity: number;
   comment?: string;
+  availableSupplements: SupplementChoice[];
+  selectedSupplements: SupplementChoice[];
 };
+
+export type SupplementChoice = { id?: string; name: string; price: number };
 
 type MenuItem = {
   id: string;
@@ -22,6 +26,7 @@ type MenuItem = {
   categoryId: string;
   stock: number | null;
   category: { id: string; name: string };
+  supplements?: Array<{ id: string; name: string; price: { toString(): string } }>;
 };
 
 type Table = { id: string; number: number; reserved: boolean };
@@ -47,6 +52,9 @@ export default function PosPage() {
   const [lastTicketSnapshot, setLastTicketSnapshot] = useState<PosCartItem[] | null>(null);
 
   const ticketCart = cart.length > 0 ? cart : lastTicketSnapshot ?? [];
+
+  const [supplementPicker, setSupplementPicker] = useState<MenuItem | null>(null);
+  const [tempSelectedSupplementIds, setTempSelectedSupplementIds] = useState<string[]>([]);
 
   const handleAfterOrderCreated = (order: { publicCode?: string | null }) => {
     if (cart.length > 0) setLastTicketSnapshot([...cart]);
@@ -96,13 +104,31 @@ export default function PosPage() {
           setOrderType(order.channel);
         }
         setCart(
-          order.orderItems?.map((oi: { menuItemId: string; menuItem: { name: string; price: { toString(): string } }; quantity: number; comment: string | null }) => ({
-            menuItemId: oi.menuItemId,
-            name: oi.menuItem.name,
-            price: Number(oi.menuItem.price),
-            quantity: oi.quantity,
-            comment: oi.comment ?? undefined,
-          })) ?? []
+          order.orderItems?.map(
+            (oi: {
+              menuItemId: string;
+              menuItem: { name: string; price: { toString(): string } };
+              quantity: number;
+              comment: string | null;
+              supplements?: any;
+            }) => {
+              const selectedSupplements: SupplementChoice[] = Array.isArray(oi.supplements)
+                ? oi.supplements.map((s: any) => ({
+                    name: String(s.name ?? ""),
+                    price: Number(s.price ?? 0),
+                  }))
+                : [];
+              return {
+                menuItemId: oi.menuItemId,
+                name: oi.menuItem.name,
+                price: Number(oi.menuItem.price),
+                quantity: oi.quantity,
+                comment: oi.comment ?? undefined,
+                availableSupplements: [],
+                selectedSupplements,
+              };
+            }
+          ) ?? []
         );
       })
       .catch(() => {});
@@ -116,17 +142,75 @@ export default function PosPage() {
   }, [menuItems]);
 
   const addToCart = (item: MenuItem, qty = 1) => {
-    const price = Number(item.price);
+    const supplements = Array.isArray(item.supplements) ? item.supplements : [];
+    const hasSupps = supplements.length > 0;
+
+    const supplementOptions: SupplementChoice[] = supplements.map((s) => ({
+      id: s.id,
+      name: s.name,
+      price: Number(s.price),
+    }));
+
+    if (hasSupps) {
+      const existing = cart.find((c) => c.menuItemId === item.id);
+      const chosen = existing?.selectedSupplements ?? [];
+      const tempIds = supplementOptions
+        .filter((opt) => chosen.some((ch) => (ch.id && opt.id && ch.id === opt.id) || ch.name === opt.name))
+        .map((opt) => opt.id ?? opt.name);
+      setTempSelectedSupplementIds(tempIds);
+      setSupplementPicker(item);
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((c) => c.menuItemId === item.id);
       if (existing) {
         return prev.map((c) =>
-          c.menuItemId === item.id ? { ...c, quantity: c.quantity + qty } : c
+          c.menuItemId === item.id
+            ? { ...c, quantity: c.quantity + qty, selectedSupplements: [], availableSupplements: [] }
+            : c
         );
       }
-      return [...prev, { menuItemId: item.id, name: item.name, price, quantity: qty }];
+      return [
+        ...prev,
+        {
+          menuItemId: item.id,
+          name: item.name,
+          price: Number(item.price),
+          quantity: qty,
+          availableSupplements: [],
+          selectedSupplements: [],
+        },
+      ];
     });
   };
+
+  function confirmAddWithSupplements(item: MenuItem, chosen: SupplementChoice[], qty = 1) {
+    const supplementOptions: SupplementChoice[] = Array.isArray(item.supplements)
+      ? item.supplements.map((s) => ({ id: s.id, name: s.name, price: Number(s.price) }))
+      : [];
+    setCart((prev) => {
+      const existing = prev.find((c) => c.menuItemId === item.id);
+      if (existing) {
+        return prev.map((c) =>
+          c.menuItemId === item.id
+            ? { ...c, quantity: c.quantity + qty, availableSupplements: supplementOptions, selectedSupplements: chosen }
+            : c
+        );
+      }
+      return [
+        ...prev,
+        {
+          menuItemId: item.id,
+          name: item.name,
+          price: Number(item.price),
+          quantity: qty,
+          availableSupplements: supplementOptions,
+          selectedSupplements: chosen,
+        },
+      ];
+    });
+  }
 
   const updateCartItem = (menuItemId: string, quantity: number) => {
     if (quantity <= 0) {
@@ -202,6 +286,85 @@ export default function PosPage() {
           />
         </div>
       </div>
+
+      {supplementPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-elevated">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-dark-900">Suppléments</h3>
+                <p className="mt-1 text-sm text-dark-600">
+                  {supplementPicker.name} — choisissez les suppléments
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSupplementPicker(null)}
+                className="rounded-lg px-2 py-1 text-sm text-dark-600 hover:bg-dark-50"
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {Array.isArray(supplementPicker.supplements) && supplementPicker.supplements.length > 0 ? (
+                supplementPicker.supplements.map((s) => {
+                  const key = s.id ?? s.name;
+                  const checked = tempSelectedSupplementIds.includes(key);
+                  return (
+                    <label key={key} className="flex items-center justify-between gap-3 text-sm text-dark-700">
+                      <span className="min-w-0 truncate">{s.name}</span>
+                      <span className="flex items-center gap-2 whitespace-nowrap">
+                        <span className="text-dark-500">+ {Number(s.price).toFixed(2)} DA</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const isOn = e.target.checked;
+                            setTempSelectedSupplementIds((prev) =>
+                              isOn ? Array.from(new Set([...prev, key])) : prev.filter((x) => x !== key)
+                            );
+                          }}
+                        />
+                      </span>
+                    </label>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-dark-500">Aucun supplément.</p>
+              )}
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const chosen: SupplementChoice[] = Array.isArray(supplementPicker.supplements)
+                    ? supplementPicker.supplements
+                        .filter((s) => tempSelectedSupplementIds.includes(s.id ?? s.name))
+                        .map((s) => ({ id: s.id, name: s.name, price: Number(s.price) }))
+                    : [];
+                  confirmAddWithSupplements(supplementPicker, chosen, 1);
+                  setSupplementPicker(null);
+                }}
+                className="btn-primary flex-1"
+              >
+                Ajouter
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSupplementPicker(null);
+                  setTempSelectedSupplementIds([]);
+                }}
+                className="flex-1 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-dark-600 transition hover:bg-dark-50"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

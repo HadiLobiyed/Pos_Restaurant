@@ -17,6 +17,7 @@ type MenuItem = {
   stock: number | null;
   barcode: string | null;
   category: Category;
+  supplements?: Array<{ id: string; name: string; price: { toString(): string } }>;
 };
 
 export default function MenuPage() {
@@ -28,6 +29,11 @@ export default function MenuPage() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [categorySupplementsId, setCategorySupplementsId] = useState<string>("");
+  const [categorySupplementsDraft, setCategorySupplementsDraft] = useState<Array<{ name: string; price: string }>>([]);
+  const [savingCategorySupps, setSavingCategorySupps] = useState(false);
+  const [categorySuppsError, setCategorySuppsError] = useState<string | null>(null);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -54,6 +60,67 @@ export default function MenuPage() {
   useEffect(() => {
     Promise.all([fetchCategories(), fetchItems()]).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!categorySupplementsId) {
+      setCategorySupplementsDraft([]);
+      return;
+    }
+    const categoryItems = items.filter((i) => i.categoryId === categorySupplementsId);
+    const first = categoryItems[0];
+    const current = Array.isArray(first?.supplements)
+      ? first!.supplements!.map((s) => ({ name: s.name, price: s.price.toString() }))
+      : [];
+    setCategorySupplementsDraft(current);
+  }, [categorySupplementsId, items]);
+
+  async function saveCategorySupplements() {
+    if (!categorySupplementsId) return;
+    setSavingCategorySupps(true);
+    setCategorySuppsError(null);
+
+    try {
+      const cleaned = categorySupplementsDraft
+        .map((s) => ({ name: s.name.trim(), price: s.price.trim() }))
+        .filter((s) => s.name.length > 0 || s.price.length > 0);
+
+      if (cleaned.length === 0) {
+        // Enregistre "sans suppléments" pour la catégorie
+      } else {
+        if (cleaned.some((s) => s.name.length === 0)) throw new Error("Nom du supplément requis.");
+        if (cleaned.some((s) => Number.isNaN(parseFloat(s.price)) || parseFloat(s.price) <= 0)) {
+          throw new Error("Prix du supplément invalide.");
+        }
+      }
+
+      // Envoyer [] pour effacer les suppléments existants
+      const normalized =
+        cleaned.length > 0 ? cleaned.map((s) => ({ name: s.name, price: parseFloat(s.price) })) : [];
+
+      const categoryItems = items.filter((i) => i.categoryId === categorySupplementsId);
+      if (categoryItems.length === 0) return;
+
+      await Promise.all(
+        categoryItems.map(async (it) => {
+          const res = await fetch(`/api/menu/${it.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ supplements: normalized }),
+          });
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error(typeof d.error === "string" ? d.error : "Erreur lors de la sauvegarde.");
+          }
+        })
+      );
+
+      await fetchItems();
+    } catch (e) {
+      setCategorySuppsError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSavingCategorySupps(false);
+    }
+  }
 
   function onCategoryCreated() {
     setShowCategoryForm(false);
@@ -183,6 +250,94 @@ export default function MenuPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-10 rounded-2xl border border-dark-200 bg-white p-6 shadow-card">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-dark-900">Suppléments par catégorie</h2>
+            <p className="mt-1 text-sm text-dark-500">
+              Choisis une catégorie (ex: pizza). Les suppléments que tu enregistres s’appliqueront aux produits de cette
+              catégorie.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <select
+            value={categorySupplementsId}
+            onChange={(e) => setCategorySupplementsId(e.target.value)}
+            className="input-field w-auto"
+          >
+            <option value="">— Choisir une catégorie —</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => void saveCategorySupplements()}
+            disabled={savingCategorySupps || !categorySupplementsId}
+            className="btn-primary"
+          >
+            {savingCategorySupps ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </div>
+
+        {categorySupplementsId && (
+          <>
+            {categorySuppsError && <p className="mt-3 text-sm text-red-600">{categorySuppsError}</p>}
+
+            <div className="mt-5 space-y-3">
+              <div className="space-y-2">
+                {categorySupplementsDraft.length === 0 ? (
+                  <p className="text-sm text-dark-500">Aucun supplément pour cette catégorie.</p>
+                ) : (
+                  categorySupplementsDraft.map((s, idx) => (
+                    <div key={`${idx}-${s.name}`} className="flex flex-wrap items-center gap-2">
+                      <input
+                        className="input-field flex-1"
+                        value={s.name}
+                        onChange={(e) => {
+                          setCategorySupplementsDraft((prev) => prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)));
+                        }}
+                        placeholder="Nom du supplément"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="input-field w-32"
+                        value={s.price}
+                        onChange={(e) => {
+                          setCategorySupplementsDraft((prev) => prev.map((x, i) => (i === idx ? { ...x, price: e.target.value } : x)));
+                        }}
+                        placeholder="Prix"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCategorySupplementsDraft((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-sm font-semibold text-red-600 hover:underline"
+                      >
+                        Suppr.
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCategorySupplementsDraft((prev) => [...prev, { name: "", price: "" }])}
+                className="text-sm font-semibold text-primary-600 hover:underline"
+              >
+                + Ajouter un supplément
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {showCategoryForm && (

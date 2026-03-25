@@ -45,7 +45,12 @@ export function PosTicket({
   onClose,
   onPrint,
 }: PosTicketProps) {
-  const subtotal = cart.reduce((s, c) => s + c.price * c.quantity, 0);
+  const subtotal = cart.reduce((s, c) => {
+    const supSum = Array.isArray(c.selectedSupplements)
+      ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
+      : 0;
+    return s + (c.price + supSum) * c.quantity;
+  }, 0);
   const total = subtotal;
 
   useEffect(() => {
@@ -55,7 +60,7 @@ export function PosTicket({
 
   return (
     <div className="ticket-modal-container fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:!fixed print:!top-0 print:!left-0 print:!right-auto print:!inset-auto print:!flex print:!justify-start print:!items-start print:bg-white print:p-0">
-      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:shadow-none print:max-w-[80mm]">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
         <div className="p-4 border-b border-dark-200 flex justify-between items-center print:hidden">
           <h3 className="font-semibold text-dark-800">Ticket</h3>
           <div className="flex gap-2">
@@ -127,14 +132,27 @@ export function PosTicket({
             </thead>
             <tbody>
               {cart.map((c) => (
+                (() => {
+                  const supSum = Array.isArray(c.selectedSupplements)
+                    ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
+                    : 0;
+                  const supNames = Array.isArray(c.selectedSupplements)
+                    ? c.selectedSupplements.map((s) => s.name).join(", ")
+                    : "";
+                  return (
                 <tr key={c.menuItemId} className="border-b border-dark-100">
                   <td className="py-1.5 pr-2">{c.quantity}</td>
-                  <td className="py-1.5 pr-2">{c.name}</td>
-                  <td className="py-1.5 text-right">{c.price.toFixed(2)} DA</td>
+                  <td className="py-1.5 pr-2">
+                    <div>{c.name}</div>
+                    {supSum > 0 && <div className="text-[10px] text-dark-600">+ {supNames}</div>}
+                  </td>
+                  <td className="py-1.5 text-right">{(c.price + supSum).toFixed(2)} DA</td>
                   <td className="py-1.5 pl-2 text-right">
-                    {(c.price * c.quantity).toFixed(2)} DA
+                    {((c.price + supSum) * c.quantity).toFixed(2)} DA
                   </td>
                 </tr>
+                  );
+                })()
               ))}
             </tbody>
           </table>

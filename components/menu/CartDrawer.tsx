@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CartItem } from "./MenuClient";
+import type { SupplementChoice } from "./MenuClient";
 
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
@@ -41,7 +42,7 @@ export function CartDrawer({
   open: boolean;
   onClose: () => void;
   cart: CartItem[];
-  onUpdate: (menuItemId: string, u: { quantity?: number; comment?: string }) => void;
+  onUpdate: (menuItemId: string, u: { quantity?: number; comment?: string; selectedSupplements?: SupplementChoice[] }) => void;
   onRemove: (menuItemId: string) => void;
   orderContext: OrderContext;
   onOrderPlaced: () => void;
@@ -56,8 +57,12 @@ export function CartDrawer({
   const [customerAddress, setCustomerAddress] = useState("");
   const [restaurantOpen, setRestaurantOpen] = useState<boolean | null>(null);
 
-  const total = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+  const total = cart.reduce((sum, c) => {
+    const supSum = c.selectedSupplements.reduce((s, sup) => s + Number(sup.price || 0), 0);
+    return sum + (c.price + supSum) * c.quantity;
+  }, 0);
   const isDelivery = orderContext.kind === "delivery";
+  const [editingSuppsFor, setEditingSuppsFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -111,6 +116,13 @@ export function CartDrawer({
         menuItemId: c.menuItemId,
         quantity: c.quantity,
         comment: c.comment || undefined,
+        supplements:
+          c.selectedSupplements.length > 0
+            ? c.selectedSupplements.map((s) => ({
+                name: s.name,
+                price: s.price,
+              }))
+            : undefined,
       })),
     };
 
@@ -255,7 +267,9 @@ export function CartDrawer({
                   <div className="flex justify-between items-start">
                     <span className="font-medium text-gray-800">{c.name}</span>
                     <span className="text-primary-600 font-medium">
-                      {(c.price * c.quantity).toFixed(2)} DA
+                      {((c.price +
+                        c.selectedSupplements.reduce((s, sup) => s + Number(sup.price || 0), 0)) *
+                        c.quantity).toFixed(2)} DA
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -279,6 +293,69 @@ export function CartDrawer({
                       Retirer
                     </button>
                   </div>
+
+                  {c.availableSupplements.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-dark-200/60">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-dark-700">Suppléments</p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingSuppsFor((cur) => (cur === c.menuItemId ? null : c.menuItemId))
+                          }
+                          className="text-xs font-semibold text-primary-600 hover:underline"
+                        >
+                          {editingSuppsFor === c.menuItemId ? "Fermer" : "Modifier"}
+                        </button>
+                      </div>
+
+                      {c.selectedSupplements.length === 0 ? (
+                        <p className="text-xs text-dark-500">Aucun supplément.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {c.selectedSupplements.map((s) => (
+                            <span
+                              key={s.id ?? s.name}
+                              className="rounded-full bg-primary-50 px-2 py-1 text-[11px] font-semibold text-primary-700"
+                            >
+                              {s.name} (+{Number(s.price).toFixed(2)} DA)
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {editingSuppsFor === c.menuItemId && (
+                        <div className="space-y-2">
+                          {c.availableSupplements.map((s) => {
+                            const checked = c.selectedSupplements.some(
+                              (sel) => (sel.id && s.id ? sel.id === s.id : sel.name === s.name)
+                            );
+                            return (
+                              <label key={s.id ?? s.name} className="flex items-center gap-2 text-sm text-dark-700">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const isNowChecked = e.target.checked;
+                                    const next = isNowChecked
+                                      ? [...c.selectedSupplements, s]
+                                      : c.selectedSupplements.filter(
+                                          (sel) => (s.id && sel.id ? sel.id !== s.id : sel.name !== s.name)
+                                        );
+                                    onUpdate(c.menuItemId, { selectedSupplements: next });
+                                  }}
+                                />
+                                <span>
+                                  {s.name} (+{Number(s.price).toFixed(2)} DA)
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <input
                     type="text"
                     placeholder="Commentaire (optionnel)"

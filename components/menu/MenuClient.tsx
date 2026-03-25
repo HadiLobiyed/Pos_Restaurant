@@ -3,12 +3,17 @@
 import { useState, useMemo } from "react";
 import { MenuItemCard } from "./MenuItemCard";
 import { CartDrawer, type OrderContext } from "./CartDrawer";
+
+export type SupplementChoice = { id?: string; name: string; price: number };
+
 export type CartItem = {
   menuItemId: string;
   name: string;
   price: number;
   quantity: number;
   comment: string;
+  availableSupplements: SupplementChoice[];
+  selectedSupplements: SupplementChoice[];
 };
 
 type Item = {
@@ -19,6 +24,7 @@ type Item = {
   image: string | null;
   categoryId: string;
   category: { id: string; name: string };
+  supplements?: Array<{ id: string; name: string; price: { toString(): string } }>;
 };
 
 export type MenuMode = "table" | "takeaway" | "delivery";
@@ -72,12 +78,19 @@ export function MenuClient({
           price: Number(item.price),
           quantity,
           comment: "",
+          availableSupplements: Array.isArray(item.supplements)
+            ? item.supplements.map((s) => ({ id: s.id, name: s.name, price: Number(s.price) }))
+            : [],
+          selectedSupplements: [],
         },
       ];
     });
   };
 
-  const updateCartItem = (menuItemId: string, updates: { quantity?: number; comment?: string }) => {
+  const updateCartItem = (
+    menuItemId: string,
+    updates: { quantity?: number; comment?: string; selectedSupplements?: SupplementChoice[] }
+  ) => {
     setCart((prev) =>
       prev
         .map((c) => {
@@ -93,10 +106,12 @@ export function MenuClient({
     setCart((prev) => prev.filter((c) => c.menuItemId !== menuItemId));
   };
 
-  const cartTotal = useMemo(
-    () => cart.reduce((sum, c) => sum + c.price * c.quantity, 0),
-    [cart]
-  );
+  const cartTotal = useMemo(() => {
+    return cart.reduce((sum, c) => {
+      const supSum = c.selectedSupplements.reduce((s, sup) => s + Number(sup.price || 0), 0);
+      return sum + (c.price + supSum) * c.quantity;
+    }, 0);
+  }, [cart]);
   const cartCount = useMemo(() => cart.reduce((sum, c) => sum + c.quantity, 0), [cart]);
 
   return (

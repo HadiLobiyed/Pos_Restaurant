@@ -73,8 +73,17 @@ model MenuItem {
   visible     Boolean   @default(true)
   stock       Int?      // null = pas de suivi, sinon quantité restante (ex: boissons)
   barcode     String?   // code-barres
+  supplements Supplement[]
   orderItems  OrderItem[]
   createdAt   DateTime  @default(now())
+}
+
+model Supplement {
+  id          String   @id @default(cuid())
+  name        String
+  price       Decimal  @db.Decimal(10, 2)
+  menuItemId  String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 }
 
 model Table {
@@ -127,6 +136,7 @@ model OrderItem {
   menuItem   MenuItem       @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   quantity   Int
   comment    String?
+  supplements Json?         // Liste des suppléments choisis: [{ id, name, price }]
   status     OrderItemStatus @default(PENDING)
 }
 

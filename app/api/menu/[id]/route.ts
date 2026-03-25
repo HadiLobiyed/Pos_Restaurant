@@ -13,6 +13,7 @@ const updateSchema = z.object({
   visible: z.boolean().optional(),
   stock: z.number().int().min(0).nullable().optional(),
   barcode: z.string().optional().nullable(),
+  supplements: z.array(z.object({ name: z.string(), price: z.number() })).optional(),
 });
 
 export async function PATCH(
@@ -28,9 +29,10 @@ export async function PATCH(
     price: body.price != null ? (typeof body.price === "string" ? parseFloat(body.price) : body.price) : undefined,
     stock: body.stock === "" || body.stock === undefined ? undefined : (typeof body.stock === "string" ? parseInt(body.stock, 10) : body.stock),
     barcode: body.barcode === undefined ? undefined : (body.barcode === "" ? null : body.barcode),
+    supplements: body.supplements ? body.supplements.map((s: any) => ({ ...s, price: parseFloat(s.price) })) : undefined,
   });
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  const data: Record<string, unknown> = {};
+  const data: any = {};
   if (parsed.data.name != null) data.name = parsed.data.name;
   if (parsed.data.description !== undefined) data.description = parsed.data.description;
   if (parsed.data.price != null) data.price = parsed.data.price;
@@ -39,10 +41,11 @@ export async function PATCH(
   if (parsed.data.visible !== undefined) data.visible = parsed.data.visible;
   if (parsed.data.stock !== undefined) data.stock = parsed.data.stock;
   if (parsed.data.barcode !== undefined) data.barcode = parsed.data.barcode;
+  if (parsed.data.supplements !== undefined) data.supplements = { deleteMany: {}, create: parsed.data.supplements };
   const item = await prisma.menuItem.update({
     where: { id },
     data,
-    include: { category: true },
+    include: { category: true, supplements: true },
   });
   return NextResponse.json(item);
 }

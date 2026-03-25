@@ -1,11 +1,17 @@
 {
+  "/api/admin/reservations/pending-count/route": "app/api/admin/reservations/pending-count/route.js",
   "/page": "app/page.js",
+  "/menu/page": "app/menu/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/commander/page": "app/commander/page.js",
-  "/menu/page": "app/menu/page.js",
   "/api/menu/route": "app/api/menu/route.js",
+  "/api/categories/route": "app/api/categories/route.js",
+  "/api/menu/[id]/route": "app/api/menu/[id]/route.js",
+  "/api/opening-hours/route": "app/api/opening-hours/route.js",
   "/api/orders/route": "app/api/orders/route.js",
-  "/suivi/page": "app/suivi/page.js",
-  "/api/orders/track/route": "app/api/orders/track/route.js"
+  "/api/orders/kitchen/route": "app/api/orders/kitchen/route.js",
+  "/api/tables/route": "app/api/tables/route.js",
+  "/admin/menu/page": "app/admin/menu/page.js",
+  "/admin/pos/page": "app/admin/pos/page.js",
+  "/admin/kitchen/page": "app/admin/kitchen/page.js"
 }

@@ -83,6 +83,7 @@ export function MenuItemForm({
     e.preventDefault();
     setError("");
     setLoading(true);
+
     const payload = {
       name,
       description: description || undefined,
@@ -217,6 +218,7 @@ export function MenuItemForm({
               ))}
             </select>
           </div>
+
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

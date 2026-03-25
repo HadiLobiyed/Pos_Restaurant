@@ -10,6 +10,7 @@ const itemSchema = z.object({
   menuItemId: z.string(),
   quantity: z.coerce.number().int().positive(),
   comment: z.string().optional(),
+  supplements: z.array(z.object({ name: z.string(), price: z.number() })).optional(),
 });
 
 /** Sans `channel` → DINE_IN (compat ancien POS / clients qui envoient seulement tableId + items) */
@@ -138,24 +139,58 @@ export async function POST(req: Request) {
         include: { table: true },
       });
 
-      await tx.orderItem.createMany({
-        data: items.map((i) => ({
+      const dataWithSupps = items.map((i) => {
+        const data: Record<string, unknown> = {
           orderId: newOrder.id,
           menuItemId: i.menuItemId,
           quantity: i.quantity,
           comment: i.comment ?? null,
-        })),
+        };
+        // On n'insère `supplements` que s'il est présent.
+        if (i.supplements !== undefined) data.supplements = i.supplements;
+        return data;
       });
+
+      const dataWithoutSupps = items.map((i) => ({
+        orderId: newOrder.id,
+        menuItemId: i.menuItemId,
+        quantity: i.quantity,
+        comment: i.comment ?? null,
+      }));
+
+      try {
+        await tx.orderItem.createMany({ data: dataWithSupps });
+      } catch (e: any) {
+        const msg = String(e?.message ?? "").toLowerCase();
+        // Si la colonne n'existe pas encore en base, on repasse sans `supplements`
+        // pour éviter un 500 (la commande doit quand même être créée).
+        const looksLikeMissingSuppsColumn =
+          msg.includes("supplements") && (msg.includes("unknown") || msg.includes("column") || msg.includes("not exist"));
+
+        if (!looksLikeMissingSuppsColumn) throw e;
+        await tx.orderItem.createMany({ data: dataWithoutSupps });
+      }
+
+      // Calcule le total à partir du panier (et pas uniquement de `oi.supplements`),
+      // pour éviter les écarts si la colonne n'est pas encore en base.
+      const menuIds = Array.from(new Set(items.map((i) => i.menuItemId)));
+      const menuRows = await tx.menuItem.findMany({
+        where: { id: { in: menuIds } },
+        select: { id: true, price: true },
+      });
+      const priceMap = new Map(menuRows.map((m) => [m.id, Number(m.price)]));
+      const sum = items.reduce((acc, i) => {
+        const base = priceMap.get(i.menuItemId) ?? 0;
+        const supSum = Array.isArray(i.supplements)
+          ? i.supplements.reduce((s, sup) => s + Number(sup.price || 0), 0)
+          : 0;
+        return acc + (base + supSum) * i.quantity;
+      }, 0);
 
       const orderItems = await tx.orderItem.findMany({
         where: { orderId: newOrder.id },
         include: { menuItem: true },
       });
-
-      const sum = orderItems.reduce(
-        (s, oi) => s + Number(oi.menuItem.price) * oi.quantity,
-        0
-      );
 
       await tx.payment.create({
         data: { orderId: newOrder.id, total: sum, status: "UNPAID" },
