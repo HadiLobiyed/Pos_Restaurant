@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PosCartItem } from "@/app/admin/pos/page";
 import { PosTicket } from "./PosTicket";
@@ -59,6 +59,7 @@ export function PosOrderSidebar({
   const [sending, setSending] = useState<"kot" | "bill" | "bill_payment" | "encaisser" | null>(null);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
+  const isPrintingRef = useRef(false);
 
   const subtotal = cart.reduce((s, c) => {
     const supSum = Array.isArray(c.selectedSupplements)
@@ -431,7 +432,15 @@ export function PosOrderSidebar({
           customerPhone={customerPhone}
           customerAddress={customerAddress}
           onClose={() => setShowTicket(false)}
-          onPrint={() => window.print()}
+          onPrint={() => {
+            if (isPrintingRef.current) return;
+            isPrintingRef.current = true;
+            window.print();
+            // Reset court pour éviter un double print si l'événement se déclenche 2 fois.
+            setTimeout(() => {
+              isPrintingRef.current = false;
+            }, 1500);
+          }}
         />
       )}
     </div>
