@@ -48,13 +48,15 @@ body {
     size: 80mm auto;
     margin: 0;
   }
+  /* Masquer tout sauf le ticket : avec `visibility:hidden` le layout reste et peut créer une 2ème page vide */
   body.ticket-modal-open * {
-    visibility: hidden;
+    display: none !important;
+    visibility: hidden !important;
   }
   body.ticket-modal-open .ticket-modal-container,
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print,
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print * {
-    visibility: visible;
+  body.ticket-modal-open .ticket-modal-container * {
+    display: block !important;
+    visibility: visible !important;
   }
   body.ticket-modal-open .ticket-modal-container {
     position: static !important;
@@ -62,7 +64,6 @@ body {
     left: auto !important;
     right: auto !important;
     bottom: auto !important;
-    display: block !important;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 !important;
@@ -72,6 +73,10 @@ body {
     box-shadow: none !important;
   }
   body.ticket-modal-open .ticket-modal-container .ticket-content-print {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 0.5rem !important;
+    border: none !important;
     page-break-inside: avoid;
   }
   body.ticket-modal-open .ticket-modal-container > div {
@@ -80,11 +85,5 @@ body {
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-  }
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    padding: 0.5rem !important;
-    border: none !important;
   }
 }
