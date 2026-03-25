@@ -45,7 +45,8 @@ body {
 /* Impression ticket : en haut à gauche, format ticket */
 @media print {
   @page {
-    size: 80mm auto;
+    /* Format ticket (évite les pages fantômes sur certains drivers) */
+    size: 80mm 200mm;
     margin: 0;
   }
 
@@ -60,21 +61,19 @@ body {
   }
 
   .ticket-modal-container {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
+    /* Important: éviter `fixed` en impression → peut dupliquer / ajouter des pages */
+    position: static !important;
+    inset: auto !important;
     display: block !important;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: transparent !important;
+    background: white !important;
     border: none !important;
     box-shadow: none !important;
     overflow: visible !important;
-    page-break-after: avoid !important;
+    break-after: avoid-page !important;
   }
 
   .ticket-content-print {
