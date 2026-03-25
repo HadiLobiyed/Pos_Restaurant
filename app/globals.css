@@ -48,11 +48,20 @@ body {
     size: 80mm auto;
     margin: 0;
   }
-  
+
+  /* Impression ticket uniquement */
+  body {
+    visibility: hidden !important;
+  }
+  body.ticket-modal-open,
+  body.ticket-modal-open * {
+    visibility: visible !important;
+  }
+
   .ticket-modal-container {
-    position: static !important;
-    top: auto !important;
-    left: auto !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
     right: auto !important;
     bottom: auto !important;
     display: block !important;
