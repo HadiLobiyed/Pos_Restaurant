@@ -296,7 +296,9 @@ export default function MenuPage() {
                   <p className="text-sm text-dark-500">Aucun supplément pour cette catégorie.</p>
                 ) : (
                   categorySupplementsDraft.map((s, idx) => (
-                    <div key={`${idx}-${s.name}`} className="flex flex-wrap items-center gap-2">
+                    // IMPORTANT: key stable sinon React remonte l'input à chaque frappe
+                    // (car s.name change) => perte du focus => obligé de recliquer.
+                    <div key={`${idx}`} className="flex flex-wrap items-center gap-2">
                       <input
                         className="input-field flex-1"
                         value={s.name}

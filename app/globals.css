@@ -45,17 +45,21 @@ body {
 /* Impression ticket : en haut à gauche, format ticket */
 @media print {
   @page {
+    size: 80mm auto;
     margin: 0;
   }
-  body.ticket-modal-open * {
-    visibility: hidden;
+
+  /* Impression ticket uniquement */
+  body {
+    visibility: hidden !important;
   }
+  /* N'afficher que le ticket (pas le POS derrière) */
   body.ticket-modal-open .ticket-modal-container,
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print,
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print * {
-    visibility: visible;
+  body.ticket-modal-open .ticket-modal-container * {
+    visibility: visible !important;
   }
-  body.ticket-modal-open .ticket-modal-container {
+
+  .ticket-modal-container {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -66,21 +70,27 @@ body {
     max-width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    overflow: visible !important;
+    page-break-after: avoid !important;
   }
-  body.ticket-modal-open .ticket-modal-container > div {
+
+  .ticket-content-print {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 0.5rem !important;
+    border: none !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .ticket-modal-container > div {
     width: 80mm !important;
     max-width: 80mm !important;
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-  }
-  body.ticket-modal-open .ticket-modal-container .ticket-content-print {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    padding: 0.5rem !important;
-    border: none !important;
   }
 }
