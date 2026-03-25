@@ -53,8 +53,9 @@ body {
   body {
     visibility: hidden !important;
   }
-  body.ticket-modal-open,
-  body.ticket-modal-open * {
+  /* N'afficher que le ticket (pas le POS derrière) */
+  body.ticket-modal-open .ticket-modal-container,
+  body.ticket-modal-open .ticket-modal-container * {
     visibility: visible !important;
   }
 
