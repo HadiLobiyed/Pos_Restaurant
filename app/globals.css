@@ -47,8 +47,9 @@ body {
  * On évite visibility:hidden (souvent = pages blanches en réel / PDF).
  */
 @media print {
+  /* 80 mm = largeur standard ticket caisse ; hauteur = contenu (rouleau) */
   @page {
-    size: auto;
+    size: 80mm auto;
     margin: 0;
   }
 
