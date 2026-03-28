@@ -10,9 +10,7 @@ type PosTicketProps = {
   orderNumber: number;
   cart: PosCartItem[];
   tableNumber?: number;
-  /** Sur place / à emporter / livraison */
   orderType?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
-  /** Code client CMD-xxx si commande web ou déjà créée */
   publicCode?: string | null;
   customerName?: string;
   customerPhone?: string;
@@ -33,6 +31,59 @@ function formatDate() {
   return `${day}/${month}/${year} ${String(h12).padStart(2, "0")}:${m} ${ampm}`;
 }
 
+// Isolated print styles injected into the popup window.
+// This approach is 100% reliable — no CSS visibility tricks,
+// no page-break guessing. The popup contains ONLY the ticket HTML.
+const PRINT_STYLES = `
+  @page { size: 80mm auto; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 80mm;
+    font-family: monospace;
+    font-size: 12px;
+    color: #1e293b;
+    background: white;
+  }
+  .ticket { width: 80mm; padding: 8px; }
+  .text-center { text-align: center; }
+  .text-right  { text-align: right; }
+  .text-left   { text-align: left; }
+  .font-bold   { font-weight: bold; }
+  .font-semibold { font-weight: 600; }
+  .text-base   { font-size: 14px; }
+  .text-dark-500 { color: #64748b; }
+  .text-dark-600 { color: #475569; }
+  .text-dark-700 { color: #334155; }
+  .text-dark-800 { color: #1e293b; }
+  .text-dark-900 { color: #0f172a; }
+  .whitespace-pre-wrap { white-space: pre-wrap; }
+  .mt-3  { margin-top: 12px; }
+  .mt-4  { margin-top: 16px; }
+  .mt-6  { margin-top: 24px; }
+  .pt-1  { padding-top: 4px; }
+  .pt-4  { padding-top: 16px; }
+  .p-3   { padding: 12px; }
+  .py-1  { padding-top: 4px; padding-bottom: 4px; }
+  .py-1-5 { padding-top: 6px; padding-bottom: 6px; }
+  .pr-2  { padding-right: 8px; }
+  .pl-2  { padding-left: 8px; }
+  .space-y-0-5 > * + * { margin-top: 2px; }
+  .space-y-1   > * + * { margin-top: 4px; }
+  .border-t { border-top: 1px solid #cbd5e1; }
+  .border-dark-100 { border-color: #f1f5f9; }
+  .border-dark-200 { border-color: #e2e8f0; }
+  .border-dark-300 { border-color: #cbd5e1; }
+  .rounded { border-radius: 4px; }
+  .bg-muted { background: rgba(248,250,252,0.8); }
+  .leading-relaxed { line-height: 1.625; }
+  .text-xs { font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { vertical-align: top; }
+  .w-full { width: 100%; }
+  .flex { display: flex; }
+  .justify-between { justify-content: space-between; }
+`;
+
 export function PosTicket({
   orderNumber,
   cart,
@@ -47,30 +98,64 @@ export function PosTicket({
 }: PosTicketProps) {
   const subtotal = cart.reduce((s, c) => {
     const supSum = Array.isArray(c.selectedSupplements)
-      ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
+      ? c.selectedSupplements.reduce(
+          (acc, sup) => acc + Number(sup.price || 0),
+          0
+        )
       : 0;
     return s + (c.price + supSum) * c.quantity;
   }, 0);
   const total = subtotal;
 
   useEffect(() => {
+    // Keep body class in sync for any future CSS needs
     document.body.classList.add("ticket-modal-open");
     return () => document.body.classList.remove("ticket-modal-open");
   }, []);
 
   const handlePrint = useCallback(() => {
-    // Ensure class is present before browser starts printing
-    document.body.classList.add("ticket-modal-open");
+    const content = document.getElementById("ticket-content");
+    if (!content) return;
+
+    // Open a clean popup containing ONLY the ticket HTML.
+    // The browser has nothing else to paginate → guaranteed 1 page.
+    const win = window.open("", "_blank", "width=340,height=600");
+    if (!win) {
+      // Popup blocked — fall back to window.print()
+      window.print();
+      onPrint();
+      return;
+    }
+
+    win.document.write(`<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ticket #${orderNumber}</title>
+    <style>${PRINT_STYLES}</style>
+  </head>
+  <body>
+    <div class="ticket">${content.innerHTML}</div>
+  </body>
+</html>`);
+
+    win.document.close();
+    win.focus();
+
+    // Give the browser ~300 ms to lay out before printing
+    setTimeout(() => {
+      win.print();
+      win.close();
+    }, 300);
+
     onPrint();
-  }, [onPrint]);
+  }, [onPrint, orderNumber]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      {/* Overlay — not the print target; ticket is .ticket-modal-container */}
-      {/* ✅ ticket-modal-container is now on the inner white box only */}
-      <div className="ticket-modal-container bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
-        {/* Header — hidden on print */}
-        <div className="p-4 border-b border-dark-200 flex justify-between items-center print:hidden">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto">
+        {/* Header */}
+        <div className="p-4 border-b border-dark-200 flex justify-between items-center">
           <h3 className="font-semibold text-dark-800">Ticket</h3>
           <div className="flex gap-2">
             <button
@@ -90,10 +175,10 @@ export function PosTicket({
           </div>
         </div>
 
-        {/* Ticket content */}
+        {/* Ticket content — this div is cloned into the popup for printing */}
         <div
           id="ticket-content"
-          className="ticket-content-print p-6 font-mono text-sm text-dark-800"
+          className="p-6 font-mono text-sm text-dark-800"
         >
           <div className="text-center space-y-0.5">
             <p className="font-bold text-base">{RESTAURANT_NAME}</p>
@@ -106,8 +191,12 @@ export function PosTicket({
             <p>
               {publicCode ? (
                 <>
-                  N° commande <span className="font-bold">{publicCode}</span>
-                  <span className="text-dark-500"> · Ticket #{orderNumber}</span>
+                  N° commande{" "}
+                  <span className="font-bold">{publicCode}</span>
+                  <span className="text-dark-500">
+                    {" "}
+                    · Ticket #{orderNumber}
+                  </span>
                 </>
               ) : (
                 <>
