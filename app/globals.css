@@ -42,10 +42,13 @@ body {
   }
 }
 
-/* Impression ticket : une seule page, sans duplicata (fixed plein écran = bug Chrome) */
+/*
+ * Impression ticket : portail sur document.body (.ticket-print-root).
+ * On évite visibility:hidden (souvent = pages blanches en réel / PDF).
+ */
 @media print {
   @page {
-    size: 80mm auto;
+    size: auto;
     margin: 0;
   }
 
@@ -57,40 +60,36 @@ body {
     background: white !important;
   }
 
-  body * {
-    visibility: hidden !important;
+  body.ticket-modal-open > *:not(.ticket-print-root) {
+    display: none !important;
   }
 
-  body.ticket-modal-open .ticket-modal-container,
-  body.ticket-modal-open .ticket-modal-container * {
-    visibility: visible !important;
-  }
-
-  /* Retire le “cadre” overlay du flux d’impression : une seule colonne ticket */
-  body.ticket-modal-open .ticket-modal-backdrop {
+  body.ticket-modal-open .ticket-print-root {
     position: static !important;
     inset: auto !important;
     display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 0 !important;
     background: transparent !important;
     padding: 0 !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
+    float: none !important;
   }
 
-  .ticket-modal-container {
+  body.ticket-modal-open .ticket-modal-container {
     position: static !important;
-    inset: auto !important;
     display: block !important;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
+    color: #0f172a !important;
     border: none !important;
     box-shadow: none !important;
     overflow: visible !important;
-    break-after: auto !important;
-    page-break-after: auto !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .ticket-content-print {
@@ -98,11 +97,11 @@ body {
     max-width: 80mm !important;
     padding: 0.5rem !important;
     border: none !important;
-    page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
-  .ticket-modal-container > div {
+  body.ticket-modal-open .ticket-modal-container > div {
     width: 80mm !important;
     max-width: 80mm !important;
     border: none !important;
