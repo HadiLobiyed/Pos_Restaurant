@@ -17,6 +17,7 @@ body {
 @layer base {
   * {
     @apply border border-slate-500/0;
+
   }
 }
 
@@ -38,5 +39,74 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Impression ticket : une seule page, sans duplicata (fixed plein écran = bug Chrome) */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  body.ticket-modal-open .ticket-modal-container,
+  body.ticket-modal-open .ticket-modal-container * {
+    visibility: visible !important;
+  }
+
+  /* Retire le “cadre” overlay du flux d’impression : une seule colonne ticket */
+  body.ticket-modal-open .ticket-modal-backdrop {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .ticket-modal-container {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .ticket-content-print {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 0.5rem !important;
+    border: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .ticket-modal-container > div {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
   }
 }
