@@ -17,7 +17,6 @@ body {
 @layer base {
   * {
     @apply border border-slate-500/0;
-
   }
 }
 
@@ -42,41 +41,48 @@ body {
   }
 }
 
-/* Impression ticket : en haut à gauche, format ticket */
+/* ─────────────────────────────────────────────
+   TICKET PRINT STYLES
+   ticket-modal-container is on the INNER white
+   box only — not the overlay — so nothing gets
+   duplicated across pages.
+───────────────────────────────────────────── */
 @media print {
   @page {
-    /* Format ticket (évite les pages fantômes sur certains drivers) */
     size: 80mm auto;
     margin: 0;
   }
 
-  /* Impression ticket uniquement */
+  /* Hide everything by default */
   body {
     visibility: hidden !important;
   }
-  /* N'afficher que le ticket (pas le POS derrière) */
+
+  /* Reveal ONLY the inner ticket box and its children */
   body.ticket-modal-open .ticket-modal-container,
   body.ticket-modal-open .ticket-modal-container * {
     visibility: visible !important;
   }
 
+  /* Position the ticket box at top-left, 80mm wide */
   .ticket-modal-container {
-    /* Important: éviter `fixed` en impression → peut dupliquer / ajouter des pages */
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
-    display: block !important;
     width: 80mm !important;
     max-width: 80mm !important;
+    height: auto !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
     border: none !important;
     box-shadow: none !important;
+    border-radius: 0 !important;
     overflow: visible !important;
+    /* Prevent a blank second page */
     break-after: avoid-page !important;
+    page-break-after: avoid !important;
   }
 
   .ticket-content-print {
@@ -86,13 +92,5 @@ body {
     border: none !important;
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
-  }
-
-  .ticket-modal-container > div {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
   }
 }
