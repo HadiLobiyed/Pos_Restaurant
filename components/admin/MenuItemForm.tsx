@@ -63,7 +63,8 @@ export function MenuItemForm({
       fd.append("file", file);
       const res = await fetch("/api/uploads/menu-image", { method: "POST", body: fd });
       if (!res.ok) {
-        setError("Erreur upload image.");
+        const data = (await res.json().catch(() => ({}))) as { error?: string; details?: string };
+        setError(data.details ? `${data.error ?? "Erreur upload"} (${data.details})` : data.error ?? "Erreur upload image.");
         return;
       }
       const data = (await res.json()) as { path?: string };

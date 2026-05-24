@@ -1,6 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+type SupplementDraft = { id: string; name: string; price: string };
+
+function newSupplementDraftRow(): SupplementDraft {
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `sup-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return { id, name: "", price: "" };
+}
+
+function supplementsDraftFromItems(categoryId: string, sourceItems: MenuItem[]): SupplementDraft[] {
+  const first = sourceItems.find((i) => i.categoryId === categoryId);
+  if (!first || !Array.isArray(first.supplements) || first.supplements.length === 0) return [];
+  return first.supplements.map((s) => ({
+    id: s.id,
+    name: s.name,
+    price: s.price.toString(),
+  }));
+}
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { MenuItemForm } from "@/components/admin/MenuItemForm";
 import { MenuItemRow } from "@/components/admin/MenuItemRow";
@@ -31,7 +51,7 @@ export default function MenuPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [categorySupplementsId, setCategorySupplementsId] = useState<string>("");
-  const [categorySupplementsDraft, setCategorySupplementsDraft] = useState<Array<{ name: string; price: string }>>([]);
+  const [categorySupplementsDraft, setCategorySupplementsDraft] = useState<SupplementDraft[]>([]);
   const [savingCategorySupps, setSavingCategorySupps] = useState(false);
   const [categorySuppsError, setCategorySuppsError] = useState<string | null>(null);
 
@@ -52,27 +72,34 @@ export default function MenuPage() {
     if (res.ok) setCategories(await res.json());
   }
 
-  async function fetchItems() {
+  async function fetchItems(): Promise<MenuItem[]> {
     const res = await fetch("/api/menu");
-    if (res.ok) setItems(await res.json());
+    if (!res.ok) return [];
+    const data = (await res.json()) as MenuItem[];
+    setItems(data);
+    return data;
   }
+
+  const applyCategorySupplementsDraft = useCallback((categoryId: string, sourceItems: MenuItem[]) => {
+    setCategorySupplementsDraft(supplementsDraftFromItems(categoryId, sourceItems));
+  }, []);
 
   useEffect(() => {
     Promise.all([fetchCategories(), fetchItems()]).finally(() => setLoading(false));
   }, []);
 
+  // Ne pas dépendre de `items` : sinon chaque refresh (ex. autre onglet) efface la saisie en cours.
   useEffect(() => {
     if (!categorySupplementsId) {
       setCategorySupplementsDraft([]);
       return;
     }
-    const categoryItems = items.filter((i) => i.categoryId === categorySupplementsId);
-    const first = categoryItems[0];
-    const current = Array.isArray(first?.supplements)
-      ? first!.supplements!.map((s) => ({ name: s.name, price: s.price.toString() }))
-      : [];
-    setCategorySupplementsDraft(current);
-  }, [categorySupplementsId, items]);
+    if (!loading) {
+      applyCategorySupplementsDraft(categorySupplementsId, items);
+    }
+    // `items` lu au moment du changement de catégorie / fin de chargement (pas dans les deps).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- évite reset à chaque fetchItems()
+  }, [categorySupplementsId, loading, applyCategorySupplementsDraft]);
 
   async function saveCategorySupplements() {
     if (!categorySupplementsId) return;
@@ -114,7 +141,10 @@ export default function MenuPage() {
         })
       );
 
-      await fetchItems();
+      const updated = await fetchItems();
+      if (categorySupplementsId) {
+        applyCategorySupplementsDraft(categorySupplementsId, updated);
+      }
     } catch (e) {
       setCategorySuppsError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -296,9 +326,7 @@ export default function MenuPage() {
                   <p className="text-sm text-dark-500">Aucun supplément pour cette catégorie.</p>
                 ) : (
                   categorySupplementsDraft.map((s, idx) => (
-                    // IMPORTANT: key stable sinon React remonte l'input à chaque frappe
-                    // (car s.name change) => perte du focus => obligé de recliquer.
-                    <div key={`${idx}`} className="flex flex-wrap items-center gap-2">
+                    <div key={s.id} className="flex flex-wrap items-center gap-2">
                       <input
                         className="input-field flex-1"
                         value={s.name}
@@ -332,7 +360,7 @@ export default function MenuPage() {
 
               <button
                 type="button"
-                onClick={() => setCategorySupplementsDraft((prev) => [...prev, { name: "", price: "" }])}
+                onClick={() => setCategorySupplementsDraft((prev) => [...prev, newSupplementDraftRow()])}
                 className="text-sm font-semibold text-primary-600 hover:underline"
               >
                 + Ajouter un supplément

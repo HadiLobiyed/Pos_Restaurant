@@ -65,8 +65,8 @@ export function PosTicket({
   }, [onPrint]);
 
   const modal = (
-    <div className="ticket-print-root ticket-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="ticket-modal-container bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
+    <div className="ticket-print-root ticket-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 print:static print:block print:h-auto print:min-h-0 print:w-[80mm] print:max-w-[80mm] print:p-0 print:bg-white">
+      <div className="ticket-modal-container bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm] print:w-[80mm]">
         <div className="p-4 border-b border-dark-200 flex justify-between items-center print:hidden">
           <h3 className="font-semibold text-dark-800">Ticket</h3>
           <div className="flex gap-2">
