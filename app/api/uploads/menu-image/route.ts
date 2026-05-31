@@ -13,7 +13,7 @@ import {
 } from "@/lib/supabase-storage";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import crypto from "crypto";
+import { randomId } from "@/lib/random-id";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ async function uploadToLocal(buffer: Buffer, ext: string): Promise<string> {
   const uploadsDir = path.join(process.cwd(), "public", "uploads", "menu");
   await mkdir(uploadsDir, { recursive: true });
 
-  const filename = `${crypto.randomUUID()}.${ext}`;
+  const filename = `${randomId()}.${ext}`;
   await writeFile(path.join(uploadsDir, filename), buffer);
   return `/uploads/menu/${filename}`;
 }

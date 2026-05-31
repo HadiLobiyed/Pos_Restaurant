@@ -5,7 +5,7 @@ import {
   getSupabaseProjectRef,
   getSupabaseProjectUrl,
 } from "./supabase-storage";
-import crypto from "crypto";
+import { randomId } from "./random-id";
 
 type UploadBody = Buffer | File | Blob;
 
@@ -49,7 +49,7 @@ export async function uploadBufferToMenuBucket(
   ext: string,
   mime: string
 ): Promise<string> {
-  const id = crypto.randomUUID();
+  const id = randomId();
   const pathVariants = [`menu/${id}.${ext}`, `${id}.${ext}`];
   const buckets = getMenuImageBucketCandidates();
 
@@ -83,7 +83,7 @@ export async function uploadFileToMenuBucket(
   ext: string,
   mime: string
 ): Promise<string> {
-  const id = crypto.randomUUID();
+  const id = randomId();
   const pathVariants = [`menu/${id}.${ext}`, `${id}.${ext}`];
   const buckets = getMenuImageBucketCandidates();
 
