@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { PosCartItem } from "@/app/admin/pos/page";
 import { PosTicket } from "./PosTicket";
@@ -59,7 +59,29 @@ export function PosOrderSidebar({
   const [sending, setSending] = useState<"kot" | "bill" | "bill_payment" | "encaisser" | null>(null);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
+  const [ticketAutoPrint, setTicketAutoPrint] = useState(false);
+  const [finishAfterTicket, setFinishAfterTicket] = useState(false);
   const isPrintingRef = useRef(false);
+
+  const triggerTicketPrint = useCallback(() => {
+    if (isPrintingRef.current) return;
+    isPrintingRef.current = true;
+    document.body.classList.add("ticket-modal-open");
+    window.print();
+    setTimeout(() => {
+      isPrintingRef.current = false;
+    }, 1500);
+  }, []);
+
+  function closeTicketModal() {
+    setShowTicket(false);
+    setTicketAutoPrint(false);
+    if (finishAfterTicket) {
+      setFinishAfterTicket(false);
+      onReset();
+      router.push("/admin/dashboard");
+    }
+  }
 
   const subtotal = cart.reduce((s, c) => {
     const supSum = Array.isArray(c.selectedSupplements)
@@ -129,6 +151,10 @@ export function PosOrderSidebar({
 
   async function encaisser() {
     if (!loadedOrderId) return;
+    if (ticketCart.length === 0) {
+      setMessage({ type: "error", text: "Aucun article à facturer." });
+      return;
+    }
     setSending("encaisser");
     setMessage(null);
     try {
@@ -138,9 +164,10 @@ export function PosOrderSidebar({
         body: JSON.stringify({ orderId: loadedOrderId, status: "PAID" }),
       });
       if (!payRes.ok) throw new Error("Erreur encaissement");
-      setMessage({ type: "ok", text: "Paiement enregistré." });
-      onReset();
-      router.push("/admin/dashboard");
+      setMessage({ type: "ok", text: "Paiement enregistré — impression du ticket…" });
+      setFinishAfterTicket(true);
+      setTicketAutoPrint(true);
+      setShowTicket(true);
     } catch (e) {
       setMessage({ type: "error", text: e instanceof Error ? e.message : "Erreur" });
     } finally {
@@ -385,7 +412,7 @@ export function PosOrderSidebar({
             <button
               type="button"
               onClick={encaisser}
-              disabled={sending !== null || cart.length === 0}
+              disabled={sending !== null || ticketCart.length === 0}
               className="col-span-2 rounded-xl bg-green-600 py-2.5 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
             >
               {sending === "encaisser" ? "Encaissement..." : "Encaisser"}
@@ -412,7 +439,11 @@ export function PosOrderSidebar({
           )}
           <button
             type="button"
-            onClick={() => setShowTicket(true)}
+            onClick={() => {
+              setFinishAfterTicket(false);
+              setTicketAutoPrint(false);
+              setShowTicket(true);
+            }}
             disabled={ticketCart.length === 0}
             className="col-span-2 rounded-xl border-2 border-dark-300 py-2.5 text-sm font-medium text-dark-700 transition hover:bg-dark-50 disabled:opacity-50"
           >
@@ -431,15 +462,19 @@ export function PosOrderSidebar({
           customerName={customerName}
           customerPhone={customerPhone}
           customerAddress={customerAddress}
-          onClose={() => setShowTicket(false)}
+          autoPrint={ticketAutoPrint}
+          onClose={closeTicketModal}
           onPrint={() => {
-            if (isPrintingRef.current) return;
-            isPrintingRef.current = true;
-            window.print();
-            // Reset court pour éviter un double print si l'événement se déclenche 2 fois.
-            setTimeout(() => {
-              isPrintingRef.current = false;
-            }, 1500);
+            triggerTicketPrint();
+            if (!finishAfterTicket) return;
+            let closed = false;
+            const done = () => {
+              if (closed) return;
+              closed = true;
+              closeTicketModal();
+            };
+            window.addEventListener("afterprint", done, { once: true });
+            setTimeout(done, 4000);
           }}
         />
       )}

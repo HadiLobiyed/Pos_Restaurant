@@ -1,18 +1,52 @@
--- Supabase → SQL Editor → Run
--- Bucket public « products » (comme dans vos URLs /public/products/...)
--- Supprimez les anciennes politiques « PRODUITS » / « JPG only » si présentes.
+-- ============================================================
+-- Supabase → SQL Editor → New query → Coller tout → Run
+-- Bucket : products (public)
+-- ============================================================
 
-DROP POLICY IF EXISTS "PRODUITS_public_read" ON storage.objects;
-DROP POLICY IF EXISTS "PRODUITS_menu_upload" ON storage.objects;
-DROP POLICY IF EXISTS "products_public_read" ON storage.objects;
-DROP POLICY IF EXISTS "products_menu_upload" ON storage.objects;
+-- 1) Supprime TOUTES les politiques Storage existantes (évite les conflits JPG / PRODUITS)
+DO $$
+DECLARE
+  pol record;
+BEGIN
+  FOR pol IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON storage.objects', pol.policyname);
+  END LOOP;
+END $$;
 
-CREATE POLICY "products_public_read"
+-- 2) Lecture publique (afficher les images)
+CREATE POLICY "products_select_anon"
 ON storage.objects FOR SELECT
-TO public
+TO anon
 USING (bucket_id = 'products');
 
-CREATE POLICY "products_upload"
+CREATE POLICY "products_select_authenticated"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (bucket_id = 'products');
+
+-- 3) Upload depuis l’admin (clé publishable = rôle anon)
+CREATE POLICY "products_insert_anon"
 ON storage.objects FOR INSERT
-TO public
+TO anon
 WITH CHECK (bucket_id = 'products');
+
+CREATE POLICY "products_insert_authenticated"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'products');
+
+-- 4) Mise à jour / suppression (optionnel)
+CREATE POLICY "products_update_anon"
+ON storage.objects FOR UPDATE
+TO anon
+USING (bucket_id = 'products')
+WITH CHECK (bucket_id = 'products');
+
+CREATE POLICY "products_delete_anon"
+ON storage.objects FOR DELETE
+TO anon
+USING (bucket_id = 'products');

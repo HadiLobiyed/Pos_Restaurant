@@ -50,7 +50,7 @@ export async function uploadBufferToMenuBucket(
   mime: string
 ): Promise<string> {
   const id = randomId();
-  const pathVariants = [`menu/${id}.${ext}`, `${id}.${ext}`];
+  const pathVariants = [`${id}.${ext}`, `menu/${id}.${ext}`];
   const buckets = getMenuImageBucketCandidates();
 
   let lastError = "Upload impossible";
@@ -66,15 +66,20 @@ export async function uploadBufferToMenuBucket(
         continue;
       }
       if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
-        throw new Error(
-          `${lastError} — Exécutez supabase/storage-policies.sql dans le SQL Editor Supabase.`
-        );
+        throw new Error(formatRlsError(lastError));
       }
       throw new Error(lastError);
     }
   }
 
   throw new Error(formatBucketNotFound(lastError));
+}
+
+function formatRlsError(lastError: string): string {
+  return (
+    `${lastError} — Ouvrez Supabase → SQL Editor, exécutez tout le fichier supabase/storage-policies.sql ` +
+    `(ou ajoutez SUPABASE_SERVICE_ROLE_KEY sur Vercel pour contourner RLS).`
+  );
 }
 
 export async function uploadFileToMenuBucket(
@@ -84,7 +89,7 @@ export async function uploadFileToMenuBucket(
   mime: string
 ): Promise<string> {
   const id = randomId();
-  const pathVariants = [`menu/${id}.${ext}`, `${id}.${ext}`];
+  const pathVariants = [`${id}.${ext}`, `menu/${id}.${ext}`];
   const buckets = getMenuImageBucketCandidates();
 
   let lastError = "Upload impossible";
@@ -98,9 +103,7 @@ export async function uploadFileToMenuBucket(
       const msg = result.message.toLowerCase();
       if (msg.includes("bucket not found")) continue;
       if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
-        throw new Error(
-          `${lastError} — Exécutez supabase/storage-policies.sql dans le SQL Editor Supabase.`
-        );
+        throw new Error(formatRlsError(lastError));
       }
       throw new Error(lastError);
     }

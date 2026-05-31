@@ -20,6 +20,8 @@ type PosTicketProps = {
   customerAddress?: string;
   onClose: () => void;
   onPrint: () => void;
+  /** Lance l’impression dès l’ouverture (ex. après Encaisser) */
+  autoPrint?: boolean;
 };
 
 function formatDate() {
@@ -45,6 +47,7 @@ export function PosTicket({
   customerAddress,
   onClose,
   onPrint,
+  autoPrint = false,
 }: PosTicketProps) {
   const subtotal = cart.reduce((s, c) => {
     const supSum = Array.isArray(c.selectedSupplements)
@@ -63,6 +66,12 @@ export function PosTicket({
     document.body.classList.add("ticket-modal-open");
     onPrint();
   }, [onPrint]);
+
+  useEffect(() => {
+    if (!autoPrint) return;
+    const t = setTimeout(() => handlePrint(), 350);
+    return () => clearTimeout(t);
+  }, [autoPrint, handlePrint]);
 
   const modal = (
     <div className="ticket-print-root ticket-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 print:static print:block print:h-auto print:min-h-0 print:w-[80mm] print:max-w-[80mm] print:p-0 print:bg-white">
