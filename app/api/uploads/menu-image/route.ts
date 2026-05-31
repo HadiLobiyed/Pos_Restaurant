@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getMenuImageBucket, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
@@ -40,6 +41,39 @@ function resolveMime(file: File): string | null {
   return mimeFromFilename(file.name);
 }
 
+async function uploadToLocal(buffer: Buffer, ext: string): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), "public", "uploads", "menu");
+  await mkdir(uploadsDir, { recursive: true });
+
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const absPath = path.join(uploadsDir, filename);
+  await writeFile(absPath, buffer);
+
+  return `/uploads/menu/${filename}`;
+}
+
+async function uploadToSupabase(buffer: Buffer, ext: string, mime: string): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    throw new Error("Supabase Storage non configuré");
+  }
+
+  const bucket = getMenuImageBucket();
+  const objectPath = `menu/${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+    contentType: mime,
+    upsert: false,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+  return data.publicUrl;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -75,22 +109,31 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "menu");
-    await mkdir(uploadsDir, { recursive: true });
+    const supabase = getSupabaseAdmin();
+    const onVercel = Boolean(process.env.VERCEL);
 
-    const filename = `${crypto.randomUUID()}.${ext}`;
-    const absPath = path.join(uploadsDir, filename);
-    await writeFile(absPath, buffer);
+    let publicPath: string;
+    if (supabase) {
+      publicPath = await uploadToSupabase(buffer, ext, mime);
+    } else if (onVercel) {
+      return NextResponse.json(
+        {
+          error:
+            "Stockage des images non configuré. Ajoutez NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sur Vercel, puis créez le bucket « menu-images » (public) dans Supabase Storage.",
+        },
+        { status: 503 }
+      );
+    } else {
+      publicPath = await uploadToLocal(buffer, ext);
+    }
 
-    const publicPath = `/uploads/menu/${filename}`;
     return NextResponse.json({ path: publicPath });
   } catch (err: unknown) {
     console.error("POST /api/uploads/menu-image", err);
     const message = err instanceof Error ? err.message : "Erreur serveur";
     return NextResponse.json(
       {
-        error:
-          "Impossible d'enregistrer l'image. Vérifiez les droits du dossier public/uploads/menu ou réessayez.",
+        error: "Impossible d'enregistrer l'image. Vérifiez la configuration Supabase Storage ou réessayez.",
         details: process.env.NODE_ENV === "development" ? message : undefined,
       },
       { status: 500 }
