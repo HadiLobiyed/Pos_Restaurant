@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import {
+  uploadMenuImageViaApi,
+  uploadMenuImageViaSupabase,
+} from "@/lib/upload-menu-image";
 
 type Category = { id: string; name: string };
 type MenuItem = {
@@ -59,20 +64,26 @@ export function MenuItemForm({
     setError("");
     setUploadingImage(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/uploads/menu-image", { method: "POST", body: fd });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string; details?: string };
-        setError(data.details ? `${data.error ?? "Erreur upload"} (${data.details})` : data.error ?? "Erreur upload image.");
+      const supabase = getSupabaseBrowser();
+      let result = supabase
+        ? await uploadMenuImageViaSupabase(file, supabase)
+        : { error: "Supabase non configuré dans le build. Redéployez Vercel avec NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY." };
+
+      if (result.error && supabase) {
+        result = await uploadMenuImageViaApi(file);
+      } else if (result.error && !supabase) {
+        result = await uploadMenuImageViaApi(file);
+      }
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
-      const data = (await res.json()) as { path?: string };
-      if (!data.path) {
+      if (!result.path) {
         setError("Upload invalide.");
         return;
       }
-      setImage(data.path);
+      setImage(result.path);
     } catch {
       setError("Erreur upload image.");
     } finally {

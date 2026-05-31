@@ -1,20 +1,35 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  getSupabaseProjectUrl,
+  getSupabasePublishableKey,
+  getSupabaseServiceKey,
+} from "./supabase-storage";
 
-let adminClient: SupabaseClient | null = null;
+let storageClient: SupabaseClient | null = null;
+let storageClientKeyUsed = "";
 
-export function getSupabaseAdmin(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) return null;
+export function getSupabaseStorageClient(): SupabaseClient | null {
+  const url = getSupabaseProjectUrl();
+  const key = getSupabaseServiceKey() ?? getSupabasePublishableKey();
+  if (!url || !key) return null;
 
-  if (!adminClient) {
-    adminClient = createClient(url, serviceKey, {
+  if (!storageClient || storageClientKeyUsed !== key) {
+    storageClient = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    storageClientKeyUsed = key;
   }
-  return adminClient;
+  return storageClient;
 }
 
-export function getMenuImageBucket(): string {
-  return process.env.SUPABASE_STORAGE_BUCKET ?? "menu-images";
+export function getSupabaseAdmin(): SupabaseClient | null {
+  const url = getSupabaseProjectUrl();
+  const serviceKey = getSupabaseServiceKey();
+  if (!url || !serviceKey) return null;
+
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
+
+export { getMenuImageBucket, getMenuImageBucketCandidates } from "./supabase-storage";
