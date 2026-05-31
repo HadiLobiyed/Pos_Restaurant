@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
         {
           error: "Supabase Storage non configuré sur Vercel.",
           details:
-            "Ajoutez NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, SUPABASE_STORAGE_BUCKET=PRODUITS puis Redeploy.",
+            "Ajoutez NEXT_PUBLIC_SUPABASE_URL (ex. https://REF.supabase.co), NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, SUPABASE_STORAGE_BUCKET=products puis Redeploy.",
         },
         { status: 503 }
       );

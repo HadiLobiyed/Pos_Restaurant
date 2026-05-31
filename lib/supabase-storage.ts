@@ -1,4 +1,5 @@
-const DEFAULT_BUCKET = "PRODUITS";
+/** Nom réel du bucket (voir URLs /storage/.../public/products/...) */
+const DEFAULT_BUCKET = "products";
 
 /** Extrait https://REF.supabase.co depuis DATABASE_URL / POSTGRES_URL */
 export function deriveSupabaseUrlFromDatabase(): string | null {
@@ -21,7 +22,7 @@ export function getSupabaseProjectRef(url: string): string | null {
 /**
  * URL du projet Supabase.
  * Sur le serveur : si NEXT_PUBLIC_SUPABASE_URL ≠ projet DATABASE_URL, on utilise DATABASE_URL
- * (le bucket PRODUITS est en général sur le même projet que Postgres).
+ * (le bucket Storage est en général sur le même projet que Postgres).
  */
 export function getSupabaseProjectUrl(): string | null {
   const explicit = (

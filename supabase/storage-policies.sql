@@ -1,16 +1,18 @@
 -- Supabase → SQL Editor → Run
--- 1) Bucket public « PRODUITS » (Storage → New bucket → Public ON)
--- 2) Supprimez l’ancienne politique « JPG only » (Storage → PRODUITS → Policies)
+-- Bucket public « products » (comme dans vos URLs /public/products/...)
+-- Supprimez les anciennes politiques « PRODUITS » / « JPG only » si présentes.
 
 DROP POLICY IF EXISTS "PRODUITS_public_read" ON storage.objects;
 DROP POLICY IF EXISTS "PRODUITS_menu_upload" ON storage.objects;
+DROP POLICY IF EXISTS "products_public_read" ON storage.objects;
+DROP POLICY IF EXISTS "products_menu_upload" ON storage.objects;
 
-CREATE POLICY "PRODUITS_public_read"
+CREATE POLICY "products_public_read"
 ON storage.objects FOR SELECT
 TO public
-USING (bucket_id = 'PRODUITS');
+USING (bucket_id = 'products');
 
-CREATE POLICY "PRODUITS_menu_upload"
+CREATE POLICY "products_upload"
 ON storage.objects FOR INSERT
 TO public
-WITH CHECK (bucket_id = 'PRODUITS');
+WITH CHECK (bucket_id = 'products');
