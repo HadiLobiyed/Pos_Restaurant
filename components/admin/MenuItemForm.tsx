@@ -64,15 +64,13 @@ export function MenuItemForm({
     setError("");
     setUploadingImage(true);
     try {
-      const supabase = getSupabaseBrowser();
-      let result = supabase
-        ? await uploadMenuImageViaSupabase(file, supabase)
-        : { error: "Supabase non configuré dans le build. Redéployez Vercel avec NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY." };
-
-      if (result.error && supabase) {
-        result = await uploadMenuImageViaApi(file);
-      } else if (result.error && !supabase) {
-        result = await uploadMenuImageViaApi(file);
+      // Serveur : URL Supabase déduite de DATABASE_URL si besoin
+      let result = await uploadMenuImageViaApi(file);
+      if (result.error) {
+        const supabase = getSupabaseBrowser();
+        if (supabase) {
+          result = await uploadMenuImageViaSupabase(file, supabase);
+        }
       }
 
       if (result.error) {

@@ -8,9 +8,7 @@ import {
   validateMenuImageFile,
 } from "@/lib/upload-menu-image";
 import {
-  getSupabaseProjectUrl,
-  getSupabasePublishableKey,
-  getSupabaseServiceKey,
+  getSupabaseStorageConfigDebug,
   isSupabaseStorageConfigured,
 } from "@/lib/supabase-storage";
 import { mkdir, writeFile } from "fs/promises";
@@ -43,9 +41,7 @@ export async function GET(req: NextRequest) {
   );
 
   const checks = {
-    supabaseUrl: Boolean(getSupabaseProjectUrl()),
-    publishableKey: Boolean(getSupabasePublishableKey()),
-    serviceRoleKey: Boolean(getSupabaseServiceKey()),
+    ...getSupabaseStorageConfigDebug(),
     storageConfigured: isSupabaseStorageConfigured(),
     bucketCandidates: buckets,
     vercel: Boolean(process.env.VERCEL),

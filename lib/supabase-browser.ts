@@ -1,10 +1,14 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getMenuImageBucket, getSupabaseProjectUrl, getSupabasePublishableKey } from "./supabase-storage";
+import {
+  getMenuImageBucket,
+  getSupabaseProjectUrlPublic,
+  getSupabasePublishableKey,
+} from "./supabase-storage";
 
 let browserClient: SupabaseClient | null = null;
 
 export function getSupabaseBrowser(): SupabaseClient | null {
-  const url = getSupabaseProjectUrl();
+  const url = getSupabaseProjectUrlPublic();
   const key = getSupabasePublishableKey();
   if (!url || !key) return null;
 

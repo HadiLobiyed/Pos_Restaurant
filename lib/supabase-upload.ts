@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getMenuImageBucketCandidates } from "./supabase-storage";
+import {
+  getMenuImageBucket,
+  getMenuImageBucketCandidates,
+  getSupabaseProjectRef,
+  getSupabaseProjectUrl,
+} from "./supabase-storage";
 import crypto from "crypto";
 
 type UploadBody = Buffer | File | Blob;
@@ -22,6 +27,20 @@ async function tryUpload(
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
   return { ok: true, publicUrl: data.publicUrl };
+}
+
+function formatBucketNotFound(lastError: string): string {
+  const url = getSupabaseProjectUrl();
+  const ref = url ? getSupabaseProjectRef(url) : null;
+  const bucket = getMenuImageBucket();
+
+  return (
+    `${lastError} — Bucket « ${bucket} » absent sur le projet Supabase` +
+    (ref ? ` ${ref}` : "") +
+    `. Corrigez NEXT_PUBLIC_SUPABASE_URL sur Vercel : ouvrez une image du site, copiez le host ` +
+    `(https://XXXX.supabase.co) et utilisez les clés API de ce même projet (Settings → API). ` +
+    `DATABASE_URL et Supabase Storage doivent être le même projet.`
+  );
 }
 
 export async function uploadBufferToMenuBucket(
@@ -47,15 +66,15 @@ export async function uploadBufferToMenuBucket(
         continue;
       }
       if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
-        continue;
+        throw new Error(
+          `${lastError} — Exécutez supabase/storage-policies.sql dans le SQL Editor Supabase.`
+        );
       }
       throw new Error(lastError);
     }
   }
 
-  throw new Error(
-    `${lastError} — Vérifiez SUPABASE_STORAGE_BUCKET=PRODUITS, NEXT_PUBLIC_SUPABASE_URL (même projet que Storage), et exécutez supabase/storage-policies.sql.`
-  );
+  throw new Error(formatBucketNotFound(lastError));
 }
 
 export async function uploadFileToMenuBucket(
@@ -79,11 +98,13 @@ export async function uploadFileToMenuBucket(
       const msg = result.message.toLowerCase();
       if (msg.includes("bucket not found")) continue;
       if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
-        continue;
+        throw new Error(
+          `${lastError} — Exécutez supabase/storage-policies.sql dans le SQL Editor Supabase.`
+        );
       }
       throw new Error(lastError);
     }
   }
 
-  throw new Error(`${lastError} — Exécutez supabase/storage-policies.sql dans Supabase.`);
+  throw new Error(formatBucketNotFound(lastError));
 }
