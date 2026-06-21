@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { MenuItemCard } from "./MenuItemCard";
 import { CartDrawer, type OrderContext } from "./CartDrawer";
+import { RestaurantClosedBanner, useRestaurantOpen } from "@/components/public/useRestaurantOpen";
 
 export type SupplementChoice = { id?: string; name: string; price: number };
 
@@ -41,8 +42,11 @@ export function MenuClient({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const { open, loading: hoursLoading, hoursToday } = useRestaurantOpen();
 
-  const canOrder = mode === "table" ? !!tableId : true;
+  const restaurantOpen = open !== false;
+  const canOrder =
+    (mode === "table" ? !!tableId : true) && (hoursLoading || restaurantOpen);
 
   const orderContext: OrderContext | null = useMemo(() => {
     if (mode === "table" && tableId) return { kind: "table", tableId };
@@ -117,6 +121,12 @@ export function MenuClient({
   return (
     <>
       <div className="max-w-4xl mx-auto px-4 py-4">
+        {!hoursLoading && !restaurantOpen && (
+          <RestaurantClosedBanner
+            hoursToday={hoursToday}
+            className="mb-4 !border-amber-200 !bg-amber-50 !text-amber-900 [&_p]:!text-amber-900 [&_p]:opacity-90"
+          />
+        )}
         {categories.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
             <button
@@ -163,7 +173,8 @@ export function MenuClient({
         <>
           <button
             onClick={() => setCartOpen(true)}
-            className="fixed bottom-6 left-4 right-4 mx-auto flex max-w-4xl items-center justify-center gap-2 rounded-2xl bg-primary-500 py-4 font-semibold text-white shadow-elevated transition hover:bg-primary-600"
+            disabled={!canOrder}
+            className="fixed bottom-6 left-4 right-4 mx-auto flex max-w-4xl items-center justify-center gap-2 rounded-2xl bg-primary-500 py-4 font-semibold text-white shadow-elevated transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Panier ({cartCount}) — {cartTotal.toFixed(2)} DA
           </button>

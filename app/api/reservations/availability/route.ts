@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateSlotTimesForDate, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reservationSlots";
+import {
+  filterPastSlotsForToday,
+  isDateOpenDay,
+  validateWeekSchedule,
+  type WeekSchedule,
+} from "@/lib/openingHours";
 
 /** Créneaux disponibles pour une date (YYYY-MM-DD) — public */
 export async function GET(req: Request) {
@@ -32,7 +38,18 @@ export async function GET(req: Request) {
       console.warn("GET /api/reservations/availability — openingHours introuvables.", e);
     }
 
-    const slots = generateSlotTimesForDate(dateStr, openingHours as any, tz);
+    const slots = generateSlotTimesForDate(dateStr, openingHours as WeekSchedule | null, tz);
+
+    const schedule = validateWeekSchedule(openingHours) ? (openingHours as WeekSchedule) : null;
+    if (!isDateOpenDay(dateStr, schedule, tz)) {
+      return NextResponse.json({
+        date: dateStr,
+        dayClosed: true,
+        slots: [],
+      });
+    }
+
+    const slotsFiltered = filterPastSlotsForToday(dateStr, slots, tz);
 
     let existing: { reservationTime: string | null }[] = [];
     try {
@@ -56,7 +73,7 @@ export async function GET(req: Request) {
       countMap.set(t, (countMap.get(t) ?? 0) + 1);
     }
 
-    const availability = slots.map((time) => {
+    const availability = slotsFiltered.map((time) => {
       const used = countMap.get(time) ?? 0;
       return {
         time,

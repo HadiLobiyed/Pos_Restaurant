@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { generateSlotTimesForDate, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reservationSlots";
+import {
+  CLOSED_NOW_MESSAGE,
+  isDateOpenDay,
+  isRestaurantOpenNow,
+  validateWeekSchedule,
+  type WeekSchedule,
+} from "@/lib/openingHours";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -33,9 +40,18 @@ export async function POST(req: Request) {
     } catch (e) {
       console.warn("POST /api/reservations — openingHours introuvables.", e);
     }
-    const allowedSlots = generateSlotTimesForDate(reservationDate, openingHours as any, tz);
+    const allowedSlots = generateSlotTimesForDate(reservationDate, openingHours as WeekSchedule | null, tz);
     if (!allowedSlots.includes(reservationTime)) {
       return NextResponse.json({ error: "Créneau horaire invalide." }, { status: 400 });
+    }
+
+    const schedule = validateWeekSchedule(openingHours) ? (openingHours as WeekSchedule) : null;
+    if (!isDateOpenDay(reservationDate, schedule, tz)) {
+      return NextResponse.json({ error: "Le restaurant est fermé ce jour-là." }, { status: 400 });
+    }
+
+    if (!isRestaurantOpenNow(schedule, tz)) {
+      return NextResponse.json({ error: CLOSED_NOW_MESSAGE }, { status: 403 });
     }
 
     const [y, mo, d] = reservationDate.split("-").map(Number);

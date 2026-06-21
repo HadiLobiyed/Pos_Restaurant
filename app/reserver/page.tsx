@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { serviceHoursDescription, slotLabel } from "@/lib/reservationSlots";
+import { RestaurantClosedBanner, useRestaurantOpen } from "@/components/public/useRestaurantOpen";
 
 type SlotInfo = { time: string; available: boolean; remaining: number };
 
@@ -26,6 +27,10 @@ export default function ReserverPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const { open, loading: hoursLoading, hoursToday } = useRestaurantOpen();
+
+  const restaurantOpen = open !== false;
+  const bookingDisabled = !hoursLoading && !restaurantOpen;
 
   const minDate = useMemo(() => todayYYYYMMDD(), []);
 
@@ -46,6 +51,11 @@ export default function ReserverPage() {
       return;
     }
     const data = await res.json();
+    if (data.dayClosed) {
+      setSlots([]);
+      setReservationTime("");
+      return;
+    }
     const list = (data.slots ?? []) as SlotInfo[];
     setSlots(list);
     setReservationTime((prev) => {
@@ -124,7 +134,11 @@ export default function ReserverPage() {
         </Link>
         <h1 className="mb-2 text-3xl font-bold text-white">Réserver une table</h1>
         <p className="mb-2 text-dark-300">Choisissez une date puis un créneau parmi les services proposés.</p>
-        <p className="mb-8 text-sm text-primary-200/90">{serviceHoursDescription()}</p>
+        {!hoursLoading && hoursToday && (
+          <p className="mb-2 text-sm text-primary-200/90">Horaires du jour : {hoursToday}</p>
+        )}
+        <p className="mb-4 text-sm text-primary-200/90">{serviceHoursDescription()}</p>
+        {bookingDisabled && <RestaurantClosedBanner hoursToday={hoursToday} className="mb-6" />}
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur">
           <div>
@@ -192,7 +206,9 @@ export default function ReserverPage() {
                   ))}
                 </select>
               ) : (
-                <p className="text-sm text-amber-200">Aucun créneau libre ce jour-là. Choisissez une autre date.</p>
+                <p className="text-sm text-amber-200">
+                  Restaurant fermé ce jour-là. Choisissez une autre date.
+                </p>
               )
             ) : (
               <p className="text-sm text-dark-400">Sélectionnez d&apos;abord une date.</p>
@@ -211,7 +227,7 @@ export default function ReserverPage() {
           {error && <p className="text-sm text-red-300">{error}</p>}
           <button
             type="submit"
-            disabled={loading || !reservationDate || !reservationTime || !hasAvailableSlot}
+            disabled={loading || bookingDisabled || !reservationDate || !reservationTime || !hasAvailableSlot}
             className="w-full rounded-xl bg-primary-500 py-3.5 font-semibold text-white hover:bg-primary-400 disabled:opacity-50"
           >
             {loading ? "Envoi..." : "Envoyer la demande"}

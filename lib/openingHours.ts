@@ -105,3 +105,74 @@ export function validateWeekSchedule(s: unknown): s is WeekSchedule {
   }
   return true;
 }
+
+export function getWeekdayForDate(dateStr: string, timeZone: string): number | null {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  if (!y || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const utcDate = new Date(Date.UTC(y, mo - 1, d));
+  return getRestaurantLocalParts(utcDate, timeZone || "UTC").weekday;
+}
+
+/** Le restaurant accueille-t-il des réservations / commandes ce jour-là ? */
+export function isDateOpenDay(
+  dateStr: string,
+  schedule: WeekSchedule | null | undefined,
+  timeZone: string
+): boolean {
+  if (schedule == null || typeof schedule !== "object" || Object.keys(schedule).length === 0) {
+    return true;
+  }
+  const weekday = getWeekdayForDate(dateStr, timeZone);
+  if (weekday == null) return false;
+  const day = schedule[String(weekday)];
+  if (!day || day.closed === true) return false;
+  const ranges = Array.isArray(day.ranges) ? day.ranges : [];
+  return ranges.length > 0;
+}
+
+export function formatDayRanges(day: DaySchedule): string {
+  if (day.closed === true) return "Fermé";
+  const ranges = Array.isArray(day.ranges) ? day.ranges : [];
+  if (ranges.length === 0) return "Fermé";
+  return ranges.map((r) => `${r.start} – ${r.end}`).join(", ");
+}
+
+export function formatTodayHoursLabel(
+  schedule: WeekSchedule | null | undefined,
+  timeZone: string,
+  now = new Date()
+): string {
+  if (schedule == null || typeof schedule !== "object" || Object.keys(schedule).length === 0) {
+    return "Ouvert — horaires non configurés";
+  }
+  const { weekday } = getRestaurantLocalParts(now, timeZone);
+  const day = schedule[String(weekday)];
+  if (!day || day.closed === true) return `${WEEKDAY_LABELS_FR[weekday]} : fermé`;
+  return `${WEEKDAY_LABELS_FR[weekday]} : ${formatDayRanges(day)}`;
+}
+
+/** Retire les créneaux déjà passés lorsque la date est aujourd'hui (fuseau restaurant). */
+export function filterPastSlotsForToday(
+  dateStr: string,
+  slots: string[],
+  timeZone: string,
+  now = new Date()
+): string[] {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timeZone || "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = fmt.format(now);
+  if (dateStr !== todayStr) return slots;
+
+  const { minutes } = getRestaurantLocalParts(now, timeZone);
+  return slots.filter((s) => {
+    const m = timeToMinutes(s);
+    return !Number.isNaN(m) && m >= minutes;
+  });
+}
+
+export const CLOSED_NOW_MESSAGE =
+  "Le restaurant n'est pas ouvert en ce moment. Commandes et réservations en ligne disponibles pendant nos heures d'ouverture.";

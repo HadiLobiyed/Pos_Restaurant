@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { isRestaurantOpenNow, type WeekSchedule } from "@/lib/openingHours";
+import { isRestaurantOpenNow, CLOSED_NOW_MESSAGE, type WeekSchedule } from "@/lib/openingHours";
 
 const itemSchema = z.object({
   menuItemId: z.string(),
@@ -91,13 +91,7 @@ export async function POST(req: Request) {
         const schedule = (settings?.openingHours as WeekSchedule | null) ?? null;
         const tz = process.env.RESTAURANT_TZ || "UTC";
         if (!isRestaurantOpenNow(schedule, tz)) {
-          return NextResponse.json(
-            {
-              error:
-                "Le restaurant n'est pas ouvert à cette heure-ci. Merci de revenir pendant nos heures d'ouverture.",
-            },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: CLOSED_NOW_MESSAGE }, { status: 403 });
         }
       } catch (e) {
         console.warn("POST /api/orders — horaires non vérifiés (schéma ou DB)", e);

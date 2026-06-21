@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CLOSED_NOW_MESSAGE } from "@/lib/openingHours";
 import type { CartItem } from "./MenuClient";
 import type { SupplementChoice } from "./MenuClient";
 
@@ -99,9 +100,7 @@ export function CartDrawer({
     try {
       const oh = await fetch("/api/opening-hours").then((r) => r.json());
       if (oh.open === false) {
-        setError(
-          "Le restaurant n'est pas ouvert à cette heure-ci. Merci de revenir pendant nos heures d'ouverture."
-        );
+        setError(CLOSED_NOW_MESSAGE);
         setRestaurantOpen(false);
         return;
       }
