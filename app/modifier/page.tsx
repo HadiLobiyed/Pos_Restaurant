@@ -47,6 +47,7 @@ function labelItemStatus(s: string): string {
 function ModifyContent() {
   const searchParams = useSearchParams();
   const tableFromUrl = searchParams.get("table");
+  const codeFromUrl = searchParams.get("code");
 
   const [step, setStep] = useState<ModifyStep>("home");
   const [codeInput, setCodeInput] = useState("");
@@ -85,10 +86,13 @@ function ModifyContent() {
   );
 
   useEffect(() => {
-    if (tableFromUrl && step === "home") {
+    if (step !== "home") return;
+    if (tableFromUrl) {
       openEdit("tableId", tableFromUrl);
+    } else if (codeFromUrl) {
+      openEdit("code", codeFromUrl);
     }
-  }, [tableFromUrl, step, openEdit]);
+  }, [tableFromUrl, codeFromUrl, step, openEdit]);
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
@@ -169,7 +173,7 @@ function ModifyContent() {
 
         {step === "home" && (
           <div className="rounded-2xl border-2 border-white/20 bg-white/10 p-8 text-center backdrop-blur">
-            {loading && tableFromUrl ? (
+            {loading && (tableFromUrl || codeFromUrl) ? (
               <p className="text-dark-200">Chargement…</p>
             ) : (
               <button

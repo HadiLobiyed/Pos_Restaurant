@@ -366,9 +366,13 @@ function SuiviContent() {
               </div>
             </div>
 
-            {data.tableId && data.paymentStatus === "UNPAID" && (
+            {data.paymentStatus === "UNPAID" && (data.tableId || data.publicCode) && (
               <Link
-                href={`/modifier?table=${encodeURIComponent(data.tableId)}`}
+                href={
+                  data.tableId
+                    ? `/modifier?table=${encodeURIComponent(data.tableId)}`
+                    : `/modifier?code=${encodeURIComponent(data.publicCode!)}`
+                }
                 className="block w-full rounded-xl border-2 border-primary-400/50 py-3 text-center font-semibold text-primary-200 hover:bg-white/10"
               >
                 Modifier ma commande
