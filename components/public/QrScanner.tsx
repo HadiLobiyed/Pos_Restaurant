@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import jsQR from "jsqr";
 import { parseTableIdFromScan } from "@/lib/tableQr";
 
 type Props = {
@@ -8,15 +9,26 @@ type Props = {
   onError?: (message: string) => void;
 };
 
+const SCAN_INTERVAL_MS = 200;
+
+type BarcodeDetectorLike = {
+  detect: (src: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
+};
+
 export function QrScanner({ onScan, onError }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
+  const scanningRef = useRef(false);
+  const lastScanRef = useRef(0);
+  const detectorRef = useRef<BarcodeDetectorLike | null>(null);
   const [active, setActive] = useState(false);
+  const [cameraError, setCameraError] = useState(false);
   const [manualUrl, setManualUrl] = useState("");
-  const [supportsCamera, setSupportsCamera] = useState(true);
 
   const stopCamera = useCallback(() => {
+    scanningRef.current = false;
     cancelAnimationFrame(rafRef.current);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -38,52 +50,107 @@ export function QrScanner({ onScan, onError }: Props) {
     [onError, onScan, stopCamera]
   );
 
+  const decodeWithJsQr = useCallback(
+    (video: HTMLVideoElement, canvas: HTMLCanvasElement): string | null => {
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (w <= 0 || h <= 0) return null;
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return null;
+
+      ctx.drawImage(video, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      });
+      return code?.data ?? null;
+    },
+    []
+  );
+
+  const scanFrame = useCallback(async () => {
+    if (!scanningRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState < video.HAVE_ENOUGH_DATA) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    const now = performance.now();
+    if (now - lastScanRef.current >= SCAN_INTERVAL_MS) {
+      lastScanRef.current = now;
+      try {
+        const detector = detectorRef.current;
+        if (detector) {
+          const codes = await detector.detect(video);
+          if (codes.length > 0 && codes[0].rawValue) {
+            handleDecoded(codes[0].rawValue);
+            return;
+          }
+        } else {
+          const value = decodeWithJsQr(video, canvas);
+          if (value) {
+            handleDecoded(value);
+            return;
+          }
+        }
+      } catch {
+        /* frame ignorée */
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(scanFrame);
+  }, [decodeWithJsQr, handleDecoded]);
+
   const startCamera = useCallback(async () => {
-    setSupportsCamera(true);
+    setCameraError(false);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError(true);
+      onError?.("Accès caméra indisponible sur ce navigateur. Collez le lien du QR ci-dessous.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,
       });
       streamRef.current = stream;
+
       const video = videoRef.current;
-      if (!video) return;
-      video.srcObject = stream;
-      await video.play();
-      setActive(true);
-
-      const Detector = typeof window !== "undefined" ? (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (src: ImageBitmapSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector : undefined;
-
-      if (!Detector) {
-        onError?.("Votre navigateur ne permet pas la lecture automatique. Collez le lien du QR ci-dessous.");
-        setSupportsCamera(false);
+      if (!video) {
+        stream.getTracks().forEach((t) => t.stop());
         return;
       }
 
-      const detector = new Detector({ formats: ["qr_code"] });
+      video.srcObject = stream;
+      video.playsInline = true;
+      await video.play();
 
-      const tick = async () => {
-        if (!videoRef.current || videoRef.current.readyState < 2) {
-          rafRef.current = requestAnimationFrame(tick);
-          return;
+      const BarcodeDetectorCtor = (
+        window as unknown as {
+          BarcodeDetector?: new (opts: { formats: string[] }) => BarcodeDetectorLike;
         }
-        try {
-          const codes = await detector.detect(videoRef.current);
-          if (codes.length > 0 && codes[0].rawValue) {
-            handleDecoded(codes[0].rawValue);
-            return;
-          }
-        } catch {
-          /* frame ignorée */
-        }
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
+      ).BarcodeDetector;
+      detectorRef.current = BarcodeDetectorCtor
+        ? new BarcodeDetectorCtor({ formats: ["qr_code"] })
+        : null;
+
+      setActive(true);
+      scanningRef.current = true;
+      lastScanRef.current = 0;
+      rafRef.current = requestAnimationFrame(scanFrame);
     } catch {
-      setSupportsCamera(false);
+      setCameraError(true);
       onError?.("Accès caméra refusé ou indisponible. Collez le lien du QR ci-dessous.");
     }
-  }, [handleDecoded, onError]);
+  }, [onError, scanFrame]);
 
   useEffect(() => {
     startCamera();
@@ -98,13 +165,14 @@ export function QrScanner({ onScan, onError }: Props) {
   return (
     <div className="space-y-4">
       <div className="relative overflow-hidden rounded-2xl border-2 border-white/20 bg-black/40">
-        <video ref={videoRef} className="aspect-square w-full object-cover" playsInline muted />
-        {active && supportsCamera && (
+        <video ref={videoRef} className="aspect-square w-full object-cover" playsInline muted autoPlay />
+        <canvas ref={canvasRef} className="hidden" aria-hidden />
+        {active && !cameraError && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="h-48 w-48 rounded-xl border-2 border-primary-400/80" />
           </div>
         )}
-        {!supportsCamera && (
+        {cameraError && (
           <div className="absolute inset-0 flex items-center justify-center bg-dark-900/80 p-4 text-center text-sm text-dark-200">
             Caméra indisponible — utilisez le champ ci-dessous.
           </div>
@@ -129,7 +197,7 @@ export function QrScanner({ onScan, onError }: Props) {
           Valider le lien
         </button>
       </form>
-      {supportsCamera && (
+      {!cameraError && (
         <button
           type="button"
           onClick={() => (active ? stopCamera() : startCamera())}

@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}";
+self.__REACT_LOADABLE_MANIFEST='{"app\\\\modifier\\\\page.tsx -> @/components/public/QrScanner":{"id":7923,"files":["static/chunks/d0f5a89a.4484cd369cc16f9d.js","static/chunks/923.f8653d0a75b27ac8.js"]},"app\\\\suivi\\\\page.tsx -> @/components/public/QrScanner":{"id":7923,"files":["static/chunks/d0f5a89a.4484cd369cc16f9d.js","static/chunks/923.f8653d0a75b27ac8.js"]}}';

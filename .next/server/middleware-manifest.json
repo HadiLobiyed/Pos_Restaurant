@@ -42,6 +42,10 @@
           "originalSource": "/admin/kitchen/:path*"
         },
         {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/admin\\/preparation(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(.json)?[\\/#\\?]?$",
+          "originalSource": "/admin/preparation/:path*"
+        },
+        {
           "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/admin\\/users(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?(.json)?[\\/#\\?]?$",
           "originalSource": "/admin/users/:path*"
         }
@@ -49,11 +53,11 @@
       "wasm": [],
       "assets": [],
       "env": {
-        "__NEXT_BUILD_ID": "RkgrVama9JptgqtCt-8BT",
-        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "f/aKGDzLDuTfMXnHOqB7chucSujZrYYAFyheW84mi3g=",
-        "__NEXT_PREVIEW_MODE_ID": "7ea724d801ff7571a72b741ee896b628",
-        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "3a6623c2471517d1563865533319d4b46002aa6c9b0b5f578316846ebfaf0b47",
-        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "aaac89d6b9f6ac03349212790e1499a0521209862ffd1c701cf1d62143e19644"
+        "__NEXT_BUILD_ID": "IZFzIHGI2wQ28e3KXtoTr",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "/bkyArmyZ/1wVxMxfo26tUKZzOUnFbseZIn4NhmWFvU=",
+        "__NEXT_PREVIEW_MODE_ID": "92fa4795c4913d52b6214ce3699d9a44",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "6709eb4f10d1abcbd12a73bfff5e3e3d40a3c6914e5ba3dc0086e31d6cb18985",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "4befba78f6d48fda73c2eb641e9d4b675f7da2c442684fd814d81105f80d19b5"
       }
     }
   },
