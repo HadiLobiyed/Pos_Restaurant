@@ -16,6 +16,7 @@ export const config = {
     "/admin/reservations",
     "/admin/reservations/:path*",
     "/admin/kitchen/:path*",
+    "/admin/preparation/:path*",
     "/admin/users/:path*",
   ],
 };

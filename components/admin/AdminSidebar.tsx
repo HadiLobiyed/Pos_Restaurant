@@ -19,6 +19,7 @@ const links: Array<{
   { href: "/admin/tables", label: "Tables", icon: "🪑" },
   { href: "/admin/reservations", label: "Réservations", icon: "📅", badge: "pendingReservations" },
   { href: "/admin/kitchen", label: "Cuisine", icon: "👨‍🍳" },
+  { href: "/admin/preparation", label: "Préparation", icon: "🍽️" },
   { href: "/admin/users", label: "Utilisateurs", icon: "👤", adminOnly: true },
 ];
 

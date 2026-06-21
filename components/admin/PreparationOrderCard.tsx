@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import {
-  KITCHEN_STATIONS,
-  KITCHEN_STATION_LABELS,
   STATION_STATUS_LABELS,
-  getStationAggregateStatus,
   allOrderItemsDone,
-  type KitchenStation,
   type StationItemStatus,
 } from "@/lib/kitchenStations";
 
@@ -16,7 +12,9 @@ type OrderItemType = {
   id: string;
   quantity: number;
   status: string;
+  comment: string | null;
   menuItem: { name: string; category: { name: string } };
+  supplements?: Array<{ name: string }>;
 };
 
 type OrderType = {
@@ -39,13 +37,19 @@ function kitchenOrderHeadline(order: OrderType): string {
   return "Commande";
 }
 
-function statusChipClass(status: StationItemStatus): string {
+function itemStatusLabel(status: string): string {
+  if (status === "DONE") return STATION_STATUS_LABELS.DONE;
+  if (status === "IN_PROGRESS") return STATION_STATUS_LABELS.IN_PROGRESS;
+  return STATION_STATUS_LABELS.PENDING;
+}
+
+function itemStatusClass(status: string): string {
   if (status === "DONE") return "bg-primary-100 text-primary-800";
   if (status === "IN_PROGRESS") return "bg-amber-100 text-amber-800";
   return "bg-dark-100 text-dark-700";
 }
 
-export function KitchenPreparationCard({
+export function PreparationOrderCard({
   order,
   onServed,
 }: {
@@ -54,11 +58,6 @@ export function KitchenPreparationCard({
 }) {
   const [serving, setServing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const stationsWithItems = KITCHEN_STATIONS.map((station) => ({
-    station,
-    status: getStationAggregateStatus(order.orderItems, station),
-  })).filter((s): s is { station: KitchenStation; status: StationItemStatus } => s.status != null);
 
   const readyToServe = allOrderItemsDone(order.orderItems);
 
@@ -93,21 +92,31 @@ export function KitchenPreparationCard({
         )}
       </div>
 
-      <div className="space-y-2 p-4">
-        {stationsWithItems.map(({ station, status }) => (
-          <div
-            key={station}
-            className="flex items-center justify-between rounded-lg border border-dark-100 px-3 py-2"
-          >
-            <span className="text-sm font-medium text-dark-800">
-              {KITCHEN_STATION_LABELS[station]}
+      <ul className="divide-y divide-dark-100 p-4">
+        {order.orderItems.map((oi) => (
+          <li key={oi.id} className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-dark-900">
+                {oi.menuItem.name}
+                <span className="ml-1 font-normal text-dark-600">×{oi.quantity}</span>
+              </p>
+              {oi.comment && (
+                <p className="mt-0.5 text-xs text-amber-800">Note : {oi.comment}</p>
+              )}
+              {Array.isArray(oi.supplements) && oi.supplements.length > 0 && (
+                <p className="mt-0.5 text-xs text-dark-500">
+                  + {oi.supplements.map((s) => s.name).join(", ")}
+                </p>
+              )}
+            </div>
+            <span
+              className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium ${itemStatusClass(oi.status)}`}
+            >
+              {itemStatusLabel(oi.status)}
             </span>
-            <span className={`rounded-lg px-2.5 py-1 text-xs font-medium ${statusChipClass(status)}`}>
-              {STATION_STATUS_LABELS[status]}
-            </span>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
 
       <div className="border-t border-dark-100 p-4">
         {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
@@ -121,7 +130,7 @@ export function KitchenPreparationCard({
         </button>
         {!readyToServe && (
           <p className="mt-2 text-center text-xs text-dark-500">
-            Disponible quand tous les postes sont terminés.
+            Disponible quand tous les articles sont terminés.
           </p>
         )}
       </div>
