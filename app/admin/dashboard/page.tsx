@@ -51,7 +51,10 @@ export default async function DashboardPage() {
       include: { order: true },
     }),
     prisma.payment.findMany({
-      where: { status: "UNPAID" },
+      where: {
+        status: "UNPAID",
+        order: { servedAt: { not: null } },
+      },
       include: {
         order: {
           include: { table: true, orderItems: { include: { menuItem: true } } },
@@ -114,7 +117,7 @@ export default async function DashboardPage() {
           Commandes à encaisser
         </h2>
         <p className="border-b border-dark-100 px-6 py-2 text-sm text-dark-500">
-          Table, livraison ou à emporter — cliquez pour envoyer à la caisse
+          Commandes servies en salle — cliquez pour envoyer à la caisse
         </p>
         <div className="divide-y divide-dark-100">
           {unpaidOrders.length === 0 ? (

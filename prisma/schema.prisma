@@ -106,6 +106,8 @@ model Order {
   customerPhone   String?
   customerAddress String?
   status          OrderStatus   @default(PENDING)
+  /// Renseigné quand la salle clique « Servie » → commande visible au dashboard pour encaissement
+  servedAt        DateTime?
   orderItems      OrderItem[]
   payment         Payment?
   createdAt       DateTime      @default(now())

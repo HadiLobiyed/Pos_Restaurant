@@ -7,7 +7,10 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const orders = await prisma.order.findMany({
-    where: { status: { in: ["PENDING", "IN_PROGRESS"] } },
+    where: {
+      servedAt: null,
+      payment: { status: "UNPAID" },
+    },
     include: {
       table: true,
       orderItems: { include: { menuItem: { include: { category: true } } } },

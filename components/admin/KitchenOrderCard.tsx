@@ -72,6 +72,26 @@ export function KitchenOrderCard({
     });
     setUpdating(null);
     if (res.ok) onStatusUpdated();
+    return res.ok;
+  }
+
+  async function handlePrintClick() {
+    const pendingItems = items.filter((oi) => oi.status === "PENDING");
+    if (pendingItems.length > 0) {
+      setUpdating("print-batch");
+      await Promise.all(
+        pendingItems.map((oi) =>
+          fetch(`/api/orders/items/${oi.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "IN_PROGRESS" }),
+          })
+        )
+      );
+      setUpdating(null);
+      onStatusUpdated();
+    }
+    setPrinting(true);
   }
 
   const cardSurface =
@@ -90,9 +110,10 @@ export function KitchenOrderCard({
             {displayStatus === "PENDING" && (
               <button
                 type="button"
-                onClick={() => setPrinting(true)}
-                className="rounded-lg bg-dark-800 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-dark-900"
-                title={`Imprimer les articles ${KITCHEN_STATION_LABELS[tab].toLowerCase()}`}
+                onClick={() => void handlePrintClick()}
+                disabled={updating === "print-batch"}
+                className="rounded-lg bg-dark-800 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-dark-900 disabled:opacity-50"
+                title={`Imprimer les articles ${KITCHEN_STATION_LABELS[tab].toLowerCase()} (passe en cours)`}
               >
                 Imprimer
               </button>
