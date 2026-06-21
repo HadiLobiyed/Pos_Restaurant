@@ -158,12 +158,16 @@ export function formatTodayHoursLabel(
   return `${WEEKDAY_LABELS_FR[weekday]} : ${formatDayRanges(day)}`;
 }
 
-/** Retire les créneaux déjà passés lorsque la date est aujourd'hui (fuseau restaurant). */
+/** Délai minimum avant une réservation (en minutes). */
+export const MIN_RESERVATION_LEAD_MINUTES = 60;
+
+/** Retire les créneaux trop proches ou passés (fuseau restaurant). */
 export function filterPastSlotsForToday(
   dateStr: string,
   slots: string[],
   timeZone: string,
-  now = new Date()
+  now = new Date(),
+  minLeadMinutes = MIN_RESERVATION_LEAD_MINUTES
 ): string[] {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: timeZone || "UTC",
@@ -175,10 +179,35 @@ export function filterPastSlotsForToday(
   if (dateStr !== todayStr) return slots;
 
   const { minutes } = getRestaurantLocalParts(now, timeZone);
+  const minAllowed = minutes + minLeadMinutes;
   return slots.filter((s) => {
     const m = timeToMinutes(s);
-    return !Number.isNaN(m) && m >= minutes;
+    return !Number.isNaN(m) && m >= minAllowed;
   });
+}
+
+/** Vérifie qu’une réservation respecte le délai minimum (1 h par défaut). */
+export function isReservationSlotAllowed(
+  dateStr: string,
+  timeStr: string,
+  timeZone: string,
+  now = new Date(),
+  minLeadMinutes = MIN_RESERVATION_LEAD_MINUTES
+): boolean {
+  const slotMin = timeToMinutes(timeStr);
+  if (Number.isNaN(slotMin)) return false;
+
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timeZone || "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = fmt.format(now);
+  if (dateStr !== todayStr) return true;
+
+  const { minutes } = getRestaurantLocalParts(now, timeZone);
+  return slotMin >= minutes + minLeadMinutes;
 }
 
 export const CLOSED_NOW_MESSAGE =

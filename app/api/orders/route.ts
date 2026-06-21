@@ -10,6 +10,13 @@ import {
   mergeWeekSchedule,
   validateWeekSchedule,
 } from "@/lib/openingHours";
+import {
+  appendItemsToOrder,
+  findActiveUnpaidTableOrder,
+  resolveTableId,
+  sumCartItems,
+  sumOrderItemsFromDb,
+} from "@/lib/orderSession";
 
 const itemSchema = z.object({
   menuItemId: z.string(),
@@ -33,13 +40,11 @@ const createSchema = z
     if (channel === "DINE_IN" && (!data.tableId || data.tableId.length === 0)) {
       ctx.addIssue({ code: "custom", message: "tableId requis pour une commande sur table", path: ["tableId"] });
     }
-    // Infos livraison obligatoires seulement pour les commandes publiques (sans session staff)
   });
 
 async function generateUniquePublicCode(tx: Prisma.TransactionClient): Promise<string> {
   for (let i = 0; i < 12; i++) {
     const code = `CMD-${Math.floor(100000 + Math.random() * 900000)}`;
-    // Cast : si l’IDE affiche une erreur, exécute `npx prisma generate` (schéma avec publicCode)
     const clash = await tx.order.findFirst({
       where: { publicCode: code } as unknown as Prisma.OrderWhereInput,
     });
@@ -61,9 +66,10 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(orders);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Internal server error";
     console.error("GET /api/orders error:", error);
-    return NextResponse.json({ error: error.message ?? "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -89,7 +95,6 @@ export async function POST(req: Request) {
     if (items.length === 0)
       return NextResponse.json({ error: "At least one item required" }, { status: 400 });
 
-    /** Commandes publiques (menu client) uniquement — le staff POS reste autorisé hors horaires */
     if (!session) {
       try {
         const settings = await prisma.restaurantSettings.findUnique({ where: { id: "default" } });
@@ -107,25 +112,44 @@ export async function POST(req: Request) {
     const order = await prisma.$transaction(async (tx) => {
       let tableIdResolved: string | undefined = undefined;
       if (channel === "DINE_IN" && tableId) {
-        let table = await tx.table.findUnique({ where: { id: tableId } });
-        if (!table) {
-          const asNumber = Number.parseInt(tableId, 10);
-          if (!Number.isNaN(asNumber)) {
-            table = await tx.table.findUnique({ where: { number: asNumber } });
-          }
-        }
-        if (!table) {
+        const resolved = await resolveTableId(tx, tableId);
+        if (!resolved) {
           const err = new Error("TABLE_NOT_FOUND");
           err.name = "TableNotFoundError";
           throw err;
         }
-        tableIdResolved = table.id;
+        tableIdResolved = resolved;
+      }
+
+      const menuIds = Array.from(new Set(items.map((i) => i.menuItemId)));
+      const menuRows = await tx.menuItem.findMany({
+        where: { id: { in: menuIds } },
+        select: { id: true, price: true },
+      });
+      const priceMap = new Map(menuRows.map((m) => [m.id, Number(m.price)]));
+
+      if (channel === "DINE_IN" && tableIdResolved) {
+        const existing = await findActiveUnpaidTableOrder(tx, tableIdResolved);
+        if (existing) {
+          await appendItemsToOrder(tx, existing.id, items);
+          const allItems = await tx.orderItem.findMany({
+            where: { orderId: existing.id },
+            include: { menuItem: true },
+          });
+          await tx.payment.update({
+            where: { orderId: existing.id },
+            data: { total: sumOrderItemsFromDb(allItems) },
+          });
+          return tx.order.findUnique({
+            where: { id: existing.id },
+            include: { table: true, orderItems: { include: { menuItem: true } } },
+          });
+        }
       }
 
       const publicCode =
         channel === "TAKEAWAY" || channel === "DELIVERY" ? await generateUniquePublicCode(tx) : null;
 
-      // Unchecked + cast : compatible même si TS/Prisma Client n’est pas régénéré après le schéma
       const newOrder = await tx.order.create({
         data: {
           tableId: tableIdResolved ?? null,
@@ -139,83 +163,25 @@ export async function POST(req: Request) {
         include: { table: true },
       });
 
-      const dataWithSupps = items.map((i) => {
-        return {
-          orderId: newOrder.id,
-          menuItemId: i.menuItemId,
-          quantity: i.quantity,
-          comment: i.comment ?? null,
-          // Prisma ne connaît pas forcément ce champ (selon ta migration).
-          // On le garde ici pour le cas où la colonne existe : le `as unknown as ...`
-          // permet de passer la compilation, puis on gère l'absence de colonne au runtime.
-          ...(i.supplements !== undefined ? { supplements: i.supplements } : {}),
-        } as unknown;
-      });
-
-      const dataWithoutSupps = items.map((i) => ({
-        orderId: newOrder.id,
-        menuItemId: i.menuItemId,
-        quantity: i.quantity,
-        comment: i.comment ?? null,
-      })) as unknown as Prisma.OrderItemCreateManyInput[];
-
-      // Corrige le type Prisma attendu par `createMany`.
-      // Si `supplements` n'existe pas en DB, le catch ci-dessous repassera sur `dataWithoutSupps`.
-      const dataWithSuppsTyped = dataWithSupps as unknown as Prisma.OrderItemCreateManyInput[];
-
-      try {
-        await tx.orderItem.createMany({ data: dataWithSuppsTyped });
-      } catch (e: any) {
-        const msg = String(e?.message ?? "").toLowerCase();
-        // Si la colonne n'existe pas encore en base, on repasse sans `supplements`
-        // pour éviter un 500 (la commande doit quand même être créée).
-        const looksLikeMissingSuppsColumn =
-          msg.includes("supplements") && (msg.includes("unknown") || msg.includes("column") || msg.includes("not exist"));
-
-        if (!looksLikeMissingSuppsColumn) throw e;
-        await tx.orderItem.createMany({ data: dataWithoutSupps });
-      }
-
-      // Calcule le total à partir du panier (et pas uniquement de `oi.supplements`),
-      // pour éviter les écarts si la colonne n'est pas encore en base.
-      const menuIds = Array.from(new Set(items.map((i) => i.menuItemId)));
-      const menuRows = await tx.menuItem.findMany({
-        where: { id: { in: menuIds } },
-        select: { id: true, price: true },
-      });
-      const priceMap = new Map(menuRows.map((m) => [m.id, Number(m.price)]));
-      const sum = items.reduce((acc, i) => {
-        const base = priceMap.get(i.menuItemId) ?? 0;
-        const supSum = Array.isArray(i.supplements)
-          ? i.supplements.reduce((s, sup) => s + Number(sup.price || 0), 0)
-          : 0;
-        return acc + (base + supSum) * i.quantity;
-      }, 0);
-
-      const orderItems = await tx.orderItem.findMany({
-        where: { orderId: newOrder.id },
-        include: { menuItem: true },
-      });
+      await appendItemsToOrder(tx, newOrder.id, items);
 
       await tx.payment.create({
-        data: { orderId: newOrder.id, total: sum, status: "UNPAID" },
+        data: { orderId: newOrder.id, total: sumCartItems(items, priceMap), status: "UNPAID" },
       });
 
       return tx.order.findUnique({
         where: { id: newOrder.id },
-        include: {
-          table: true,
-          orderItems: { include: { menuItem: true } },
-        },
+        include: { table: true, orderItems: { include: { menuItem: true } } },
       });
     });
 
     return NextResponse.json(order, { status: 201 });
-  } catch (error: any) {
-    if (error?.message === "TABLE_NOT_FOUND") {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "TABLE_NOT_FOUND") {
       return NextResponse.json({ error: "Table introuvable. Scannez le QR code de votre table." }, { status: 400 });
     }
+    const msg = error instanceof Error ? error.message : "Internal server error";
     console.error("POST /api/orders error:", error);
-    return NextResponse.json({ error: error.message ?? "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

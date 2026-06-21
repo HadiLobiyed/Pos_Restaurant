@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { findActiveUnpaidTableOrder, resolveTableId } from "@/lib/orderSession";
+import { loadOrderForModify } from "@/lib/orderModifyAuth";
+import { toTrackPayload } from "@/lib/orderTrackPayload";
 
 const include = {
   table: true,
@@ -14,52 +17,18 @@ function normalizePublicCode(raw: string): string {
   return s;
 }
 
-function toTrackPayload(order: {
-  id: string;
-  status: string;
-  channel: string;
-  publicCode: string | null;
-  createdAt: Date;
-  table: { number: number } | null;
-  orderItems: Array<{
-    quantity: number;
-    comment: string | null;
-    status: string;
-    menuItem: { name: string; price: unknown };
-  }>;
-  payment: { status: string } | null;
-}) {
-  const items = order.orderItems.map((oi) => ({
-    name: oi.menuItem.name,
-    quantity: oi.quantity,
-    comment: oi.comment,
-    status: oi.status,
-    unitPrice: Number(oi.menuItem.price),
-  }));
-  const total = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-  return {
-    id: order.id,
-    status: order.status,
-    channel: order.channel,
-    publicCode: order.publicCode,
-    tableNumber: order.table?.number ?? null,
-    createdAt: order.createdAt.toISOString(),
-    paymentStatus: order.payment?.status ?? null,
-    items,
-    total,
-  };
-}
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const codeRaw = searchParams.get("code");
+  const tableIdRaw = searchParams.get("tableId");
   const tableRaw = searchParams.get("table");
 
-  if (!codeRaw && !tableRaw) {
-    return NextResponse.json({ error: "Indiquez un code commande ou un numéro de table." }, { status: 400 });
-  }
-  if (codeRaw && tableRaw) {
-    return NextResponse.json({ error: "Utilisez soit le code, soit la table." }, { status: 400 });
+  const params = [codeRaw, tableIdRaw, tableRaw].filter(Boolean);
+  if (params.length !== 1) {
+    return NextResponse.json(
+      { error: "Indiquez un code commande ou identifiez votre table (QR)." },
+      { status: 400 }
+    );
   }
 
   try {
@@ -70,29 +39,26 @@ export async function GET(req: Request) {
         include,
       });
       if (!order) {
-        return NextResponse.json({ error: "Commande introuvable. Vérifiez le code reçu après validation." }, { status: 404 });
+        return NextResponse.json(
+          { error: "Commande introuvable. Vérifiez le code reçu après validation." },
+          { status: 404 }
+        );
       }
       return NextResponse.json(toTrackPayload(order));
     }
 
-    const num = Number.parseInt(String(tableRaw).trim(), 10);
-    if (Number.isNaN(num) || num < 1) {
-      return NextResponse.json({ error: "Numéro de table invalide." }, { status: 400 });
+    const tableKey = (tableIdRaw ?? tableRaw ?? "").trim();
+    const resolvedId = await resolveTableId(prisma, tableKey);
+    if (!resolvedId) {
+      return NextResponse.json({ error: "Table introuvable. Scannez le QR code de votre table." }, { status: 404 });
     }
 
-    const table = await prisma.table.findUnique({ where: { number: num } });
-    if (!table) {
-      return NextResponse.json({ error: "Cette table n'existe pas." }, { status: 404 });
-    }
-
-    const order = await prisma.order.findFirst({
-      where: { tableId: table.id },
-      include,
-      orderBy: { createdAt: "desc" },
-    });
-
+    const order = await findActiveUnpaidTableOrder(prisma, resolvedId);
     if (!order) {
-      return NextResponse.json({ error: "Aucune commande enregistrée pour cette table." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Aucune commande active pour cette table. Passez commande via le menu." },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(toTrackPayload(order));

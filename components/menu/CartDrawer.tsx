@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CLOSED_NOW_MESSAGE } from "@/lib/openingHours";
 import type { CartItem } from "./MenuClient";
@@ -51,6 +52,7 @@ export function CartDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [publicCode, setPublicCode] = useState<string | null>(null);
+  const [mergedToTable, setMergedToTable] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [error, setError] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -154,12 +156,14 @@ export function CartDrawer({
     }
     const data = await res.json();
     setPublicCode(typeof data?.publicCode === "string" ? data.publicCode : null);
+    setMergedToTable(orderContext.kind === "table" && !data?.publicCode);
     setSuccess(true);
     onOrderPlaced();
     setTimeout(() => {
       onClose();
       setSuccess(false);
       setPublicCode(null);
+      setMergedToTable(false);
       setCustomerName("");
       setCustomerPhone("");
       setCustomerAddress("");
@@ -225,6 +229,29 @@ export function CartDrawer({
                     </button>
                   </div>
                   <p className="mt-3 text-xs text-dark-500">Présentez ce code au comptoir.</p>
+                </div>
+              ) : mergedToTable ? (
+                <div className="rounded-2xl border-2 border-primary-200 bg-primary-50 p-6 space-y-3">
+                  <p className="text-sm text-dark-700">
+                    Vos plats ont été ajoutés à la commande de votre table. Le ticket final regroupe toutes les
+                    commandes jusqu&apos;au paiement.
+                  </p>
+                  {orderContext.kind === "table" && (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                      <Link
+                        href={`/suivi?table=${encodeURIComponent(orderContext.tableId)}`}
+                        className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500"
+                      >
+                        Suivre ma commande
+                      </Link>
+                      <Link
+                        href={`/modifier?table=${encodeURIComponent(orderContext.tableId)}`}
+                        className="rounded-xl border border-primary-300 px-4 py-2 text-sm font-semibold text-primary-800 hover:bg-white"
+                      >
+                        Modifier
+                      </Link>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-dark-500">Merci — la cuisine a bien reçu votre commande.</p>

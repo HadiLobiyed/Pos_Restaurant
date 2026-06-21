@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 
-type TrackStep = "home" | "mode" | "table" | "code" | "result";
+const QrScanner = dynamic(() => import("@/components/public/QrScanner").then((m) => m.QrScanner), {
+  ssr: false,
+  loading: () => <p className="text-center text-sm text-dark-300">Chargement du scanner…</p>,
+});
+
+type TrackStep = "home" | "mode" | "scan" | "code" | "result";
 
 type TrackPayload = {
   id: string;
@@ -11,14 +18,18 @@ type TrackPayload = {
   channel: string;
   publicCode: string | null;
   tableNumber: number | null;
+  tableId: string | null;
   createdAt: string;
   paymentStatus: string | null;
   items: Array<{
+    id: string;
     name: string;
     quantity: number;
     comment: string | null;
     status: string;
     unitPrice: number;
+    lineTotal: number;
+    editable: boolean;
   }>;
   total: number;
 };
@@ -36,7 +47,6 @@ function labelOrderStatus(s: string): string {
   }
 }
 
-/** Livraison encaissée : le client voit « En livraison » plutôt que l’état cuisine seul */
 function displayGlobalStatus(data: TrackPayload): string {
   if (data.channel === "DELIVERY" && data.paymentStatus === "PAID") {
     if (data.status === "DONE") return "En Livraison";
@@ -49,6 +59,26 @@ function deliveryPaidSubtitle(data: TrackPayload): string | null {
   if (data.channel !== "DELIVERY" || data.paymentStatus !== "PAID") return null;
   if (data.status === "DONE") return "Merci de votre confiance.";
   return "Votre commande payée est en cours de préparation ou de livraison.";
+}
+
+function labelItemStatus(s: string): string {
+  switch (s) {
+    case "PENDING":
+      return "En attente";
+    case "IN_PROGRESS":
+      return "En cours";
+    case "DONE":
+      return "Prêt";
+    default:
+      return s;
+  }
+}
+
+function labelPayment(s: string | null): string {
+  if (!s) return "—";
+  if (s === "PAID") return "Payée";
+  if (s === "UNPAID") return "À payer";
+  return s;
 }
 
 function TrackResultSummary({ data }: { data: TrackPayload }) {
@@ -89,37 +119,20 @@ function TrackResultSummary({ data }: { data: TrackPayload }) {
   );
 }
 
-function labelItemStatus(s: string): string {
-  switch (s) {
-    case "PENDING":
-      return "En attente";
-    case "IN_PROGRESS":
-      return "En cours";
-    case "DONE":
-      return "Prêt";
-    default:
-      return s;
-  }
-}
+function SuiviContent() {
+  const searchParams = useSearchParams();
+  const tableFromUrl = searchParams.get("table");
 
-function labelPayment(s: string | null): string {
-  if (!s) return "—";
-  if (s === "PAID") return "Payée";
-  if (s === "UNPAID") return "À payer";
-  return s;
-}
-
-export default function SuiviCommandePage() {
   const [step, setStep] = useState<TrackStep>("home");
-  const [tableInput, setTableInput] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState<TrackPayload | null>(null);
-  const [query, setQuery] = useState<{ kind: "table" | "code"; value: string } | null>(null);
+  const [query, setQuery] = useState<{ kind: "tableId" | "code"; value: string } | null>(null);
 
-  const fetchTrack = useCallback(async (kind: "table" | "code", value: string) => {
-    const q = kind === "table" ? `table=${encodeURIComponent(value)}` : `code=${encodeURIComponent(value)}`;
+  const fetchTrack = useCallback(async (kind: "tableId" | "code", value: string) => {
+    const q =
+      kind === "tableId" ? `tableId=${encodeURIComponent(value)}` : `code=${encodeURIComponent(value)}`;
     const res = await fetch(`/api/orders/track?${q}`);
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -127,6 +140,30 @@ export default function SuiviCommandePage() {
     }
     return body as TrackPayload;
   }, []);
+
+  const openTableTrack = useCallback(
+    async (tableId: string) => {
+      setError("");
+      setLoading(true);
+      try {
+        const payload = await fetchTrack("tableId", tableId);
+        setData(payload);
+        setQuery({ kind: "tableId", value: tableId });
+        setStep("result");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erreur.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchTrack]
+  );
+
+  useEffect(() => {
+    if (tableFromUrl && step === "home") {
+      openTableTrack(tableFromUrl);
+    }
+  }, [tableFromUrl, step, openTableTrack]);
 
   useEffect(() => {
     if (step !== "result" || !query) return;
@@ -136,9 +173,7 @@ export default function SuiviCommandePage() {
         .then((payload) => {
           if (!cancelled) setData(payload);
         })
-        .catch(() => {
-          /* garde le dernier état connu pendant le polling */
-        });
+        .catch(() => {});
     };
     load();
     const t = setInterval(load, 10000);
@@ -147,27 +182,6 @@ export default function SuiviCommandePage() {
       clearInterval(t);
     };
   }, [step, query, fetchTrack]);
-
-  async function submitTable(e: React.FormEvent) {
-    e.preventDefault();
-    const n = tableInput.trim();
-    if (!n) {
-      setError("Indiquez le numéro de votre table.");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    try {
-      const payload = await fetchTrack("table", n);
-      setData(payload);
-      setQuery({ kind: "table", value: n });
-      setStep("result");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
@@ -195,7 +209,6 @@ export default function SuiviCommandePage() {
     setError("");
     setData(null);
     setQuery(null);
-    setTableInput("");
     setCodeInput("");
   }
 
@@ -213,16 +226,23 @@ export default function SuiviCommandePage() {
 
         {step === "home" && (
           <div className="rounded-2xl border-2 border-white/20 bg-white/10 p-8 text-center backdrop-blur">
-            <p className="mb-6 text-dark-200">
-              Vous êtes sur place au restaurant ou vous avez commandé à emporter / en livraison ? Cliquez pour continuer.
-            </p>
-            <button
-              type="button"
-              onClick={() => setStep("mode")}
-              className="w-full rounded-2xl bg-accent-500 px-8 py-4 font-semibold text-white shadow-glow transition hover:bg-accent-400"
-            >
-              Suivre ma commande
-            </button>
+            {loading && tableFromUrl ? (
+              <p className="text-dark-200">Chargement de votre commande…</p>
+            ) : (
+              <>
+                <p className="mb-6 text-dark-200">
+                  Sur place au restaurant ou commande à emporter / livraison ? Cliquez pour continuer.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStep("mode")}
+                  className="w-full rounded-2xl bg-accent-500 px-8 py-4 font-semibold text-white shadow-glow transition hover:bg-accent-400"
+                >
+                  Suivre ma commande
+                </button>
+              </>
+            )}
+            {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
           </div>
         )}
 
@@ -232,13 +252,15 @@ export default function SuiviCommandePage() {
             <button
               type="button"
               onClick={() => {
-                setStep("table");
+                setStep("scan");
                 setError("");
               }}
               className="flex w-full flex-col rounded-2xl border-2 border-white/20 bg-white/10 p-6 text-left text-white backdrop-blur transition hover:border-primary-400 hover:bg-white/15"
             >
               <span className="text-xl font-bold">Sur place</span>
-              <span className="mt-2 text-sm text-dark-200">Vous mangez au restaurant : saisissez le numéro de votre table.</span>
+              <span className="mt-2 text-sm text-dark-200">
+                Scannez le QR code affiché sur votre table.
+              </span>
             </button>
             <button
               type="button"
@@ -250,15 +272,12 @@ export default function SuiviCommandePage() {
             >
               <span className="text-xl font-bold">Hors restaurant</span>
               <span className="mt-2 text-sm text-dark-200">
-                À emporter ou livraison : utilisez le code reçu après validation (ex. CMD-123456).
+                À emporter ou livraison : utilisez le code reçu (ex. CMD-123456).
               </span>
             </button>
             <button
               type="button"
-              onClick={() => {
-                setStep("home");
-                setError("");
-              }}
+              onClick={goHome}
               className="w-full rounded-xl border border-white/30 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
             >
               Retour
@@ -266,39 +285,23 @@ export default function SuiviCommandePage() {
           </div>
         )}
 
-        {step === "table" && (
-          <form onSubmit={submitTable} className="space-y-4 rounded-2xl border-2 border-white/20 bg-white/10 p-6 backdrop-blur">
-            <label className="block text-sm font-semibold text-white">Numéro de table</label>
-            <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={tableInput}
-              onChange={(e) => setTableInput(e.target.value)}
-              placeholder="Ex. 5"
-              className="w-full rounded-xl border border-white/20 bg-dark-900/50 px-4 py-3 text-white placeholder:text-dark-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
-            />
+        {step === "scan" && (
+          <div className="space-y-4 rounded-2xl border-2 border-white/20 bg-white/10 p-6 backdrop-blur">
+            <p className="text-sm font-semibold text-white">Scannez le QR code de votre table</p>
+            <QrScanner onScan={openTableTrack} onError={setError} />
+            {loading && <p className="text-center text-sm text-primary-200">Chargement…</p>}
             {error && <p className="text-sm text-red-300">{error}</p>}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 rounded-xl bg-primary-500 py-3 font-semibold text-white hover:bg-primary-400 disabled:opacity-60"
-              >
-                {loading ? "Chargement…" : "Voir ma commande"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("mode");
-                  setError("");
-                }}
-                className="rounded-xl border border-white/30 px-4 py-3 font-semibold text-white hover:bg-white/10"
-              >
-                Retour
-              </button>
-            </div>
-          </form>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("mode");
+                setError("");
+              }}
+              className="w-full rounded-xl border border-white/30 py-3 font-semibold text-white hover:bg-white/10"
+            >
+              Retour
+            </button>
+          </div>
         )}
 
         {step === "code" && (
@@ -342,13 +345,13 @@ export default function SuiviCommandePage() {
             <div className="rounded-2xl border-2 border-white/20 bg-white/10 p-6 backdrop-blur">
               <h2 className="mb-4 text-lg font-bold text-white">Votre commande</h2>
               <ul className="space-y-4">
-                {data.items.map((line, i) => (
-                  <li key={i} className="border-b border-white/10 pb-4 last:border-0 last:pb-0">
+                {data.items.map((line) => (
+                  <li key={line.id} className="border-b border-white/10 pb-4 last:border-0 last:pb-0">
                     <div className="flex justify-between gap-2">
                       <span className="font-medium text-white">
                         {line.quantity}× {line.name}
                       </span>
-                      <span className="shrink-0 text-dark-200">{(line.unitPrice * line.quantity).toFixed(2)} DA</span>
+                      <span className="shrink-0 text-dark-200">{line.lineTotal.toFixed(2)} DA</span>
                     </div>
                     {line.comment && <p className="mt-1 text-sm text-dark-300">Note : {line.comment}</p>}
                     <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-primary-300">
@@ -363,6 +366,15 @@ export default function SuiviCommandePage() {
               </div>
             </div>
 
+            {data.tableId && data.paymentStatus === "UNPAID" && (
+              <Link
+                href={`/modifier?table=${encodeURIComponent(data.tableId)}`}
+                className="block w-full rounded-xl border-2 border-primary-400/50 py-3 text-center font-semibold text-primary-200 hover:bg-white/10"
+              >
+                Modifier ma commande
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={goHome}
@@ -374,5 +386,19 @@ export default function SuiviCommandePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SuiviCommandePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-dark-900">
+          <p className="text-dark-300">Chargement…</p>
+        </main>
+      }
+    >
+      <SuiviContent />
+    </Suspense>
   );
 }

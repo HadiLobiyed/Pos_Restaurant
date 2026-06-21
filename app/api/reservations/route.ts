@@ -5,6 +5,7 @@ import { generateSlotTimesForDate, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reser
 import {
   CLOSED_NOW_MESSAGE,
   isDateOpenDay,
+  isReservationSlotAllowed,
   isRestaurantOpenNow,
   mergeWeekSchedule,
   validateWeekSchedule,
@@ -47,6 +48,13 @@ export async function POST(req: Request) {
     const allowedSlots = generateSlotTimesForDate(reservationDate, merged, tz);
     if (!allowedSlots.includes(reservationTime)) {
       return NextResponse.json({ error: "Créneau horaire invalide." }, { status: 400 });
+    }
+
+    if (!isReservationSlotAllowed(reservationDate, reservationTime, tz)) {
+      return NextResponse.json(
+        { error: "La réservation doit être au minimum 1 heure après l'heure actuelle." },
+        { status: 400 }
+      );
     }
 
     const schedule = validateWeekSchedule(merged) ? merged : null;

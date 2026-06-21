@@ -55,16 +55,33 @@ function MenuContent() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-dark-50 to-white pb-24">
       <header className="sticky top-0 z-10 border-b border-dark-200/60 bg-white/80 px-4 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2">
           {hideBack ? (
-            <div className="w-16" />
+            <div className="w-16 shrink-0" />
           ) : (
-            <Link href="/" className="font-semibold text-primary-600 transition hover:text-primary-700">
+            <Link href="/" className="shrink-0 font-semibold text-primary-600 transition hover:text-primary-700">
               ← Retour
             </Link>
           )}
           <h1 className="text-xl font-bold text-dark-900">Notre menu</h1>
-          <div className="w-16" />
+          {mode === "table" && tableId ? (
+            <div className="flex shrink-0 gap-1 text-xs font-semibold sm:gap-2 sm:text-sm">
+              <Link
+                href={`/suivi?table=${encodeURIComponent(tableId)}`}
+                className="rounded-lg px-2 py-1.5 text-primary-600 hover:bg-primary-50 sm:px-3"
+              >
+                Suivi
+              </Link>
+              <Link
+                href={`/modifier?table=${encodeURIComponent(tableId)}`}
+                className="rounded-lg px-2 py-1.5 text-primary-600 hover:bg-primary-50 sm:px-3"
+              >
+                Modifier
+              </Link>
+            </div>
+          ) : (
+            <div className="w-16 shrink-0" />
+          )}
         </div>
         {mode === "browse" && (
           <p className="mt-2 text-center text-sm text-amber-700">
