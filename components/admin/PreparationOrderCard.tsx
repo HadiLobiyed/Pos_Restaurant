@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import {
   STATION_STATUS_LABELS,
   allOrderItemsDone,
-  type StationItemStatus,
 } from "@/lib/kitchenStations";
 
 type OrderItemType = {
@@ -126,11 +125,15 @@ export function PreparationOrderCard({
           disabled={!readyToServe || serving}
           className="w-full rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {serving ? "Envoi..." : "Servie → encaissement"}
+          {serving ? "Validation en cours…" : "Valider le service"}
         </button>
-        {!readyToServe && (
+        {!readyToServe ? (
           <p className="mt-2 text-center text-xs text-dark-500">
-            Disponible quand tous les articles sont terminés.
+            Tous les articles doivent être prêts avant validation.
+          </p>
+        ) : (
+          <p className="mt-2 text-center text-xs text-dark-500">
+            La commande sera disponible à l&apos;encaissement sur le dashboard.
           </p>
         )}
       </div>

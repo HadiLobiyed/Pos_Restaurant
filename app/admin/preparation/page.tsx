@@ -56,8 +56,8 @@ export default function PreparationPage() {
     <div className="p-8">
       <h1 className="mb-2 text-2xl font-bold text-dark-900">Préparation</h1>
       <p className="mb-6 text-sm text-dark-500">
-        État de chaque article par commande. Quand tout est terminé, cliquez « Servie » pour envoyer
-        la commande au dashboard (encaissement).
+        État de chaque article par commande. Quand tout est prêt, validez le service : la commande
+        apparaît sur le dashboard pour encaissement.
       </p>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
