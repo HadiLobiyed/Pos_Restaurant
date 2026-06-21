@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { KitchenOrderCard } from "@/components/admin/KitchenOrderCard";
-
-const PIZZA_CATEGORY = "pizza";
+import {
+  getKitchenStation,
+  KITCHEN_STATION_LABELS,
+  type KitchenStation,
+} from "@/lib/kitchenStations";
 
 type OrderItem = {
   id: string;
@@ -11,6 +14,7 @@ type OrderItem = {
   comment: string | null;
   status: string;
   menuItem: { name: string; category: { name: string } };
+  supplements?: Array<{ id?: string; name: string; price?: number }>;
 };
 
 type Order = {
@@ -27,15 +31,18 @@ type Order = {
 };
 
 const POLL_INTERVAL_MS = 10000;
+const STATIONS: KitchenStation[] = ["pizzeria", "restaurant", "bar"];
 
-function isPizzaItem(oi: OrderItem): boolean {
-  return oi.menuItem.category.name.toLowerCase() === PIZZA_CATEGORY;
+function itemsForStation(order: Order, station: KitchenStation): OrderItem[] {
+  return order.orderItems.filter(
+    (oi) => getKitchenStation(oi.menuItem.category.name) === station
+  );
 }
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"pizzeria" | "restaurant">("pizzeria");
+  const [activeTab, setActiveTab] = useState<KitchenStation>("pizzeria");
 
   async function fetchOrders() {
     const res = await fetch("/api/orders/kitchen");
@@ -51,29 +58,26 @@ export default function KitchenPage() {
     return () => clearInterval(t);
   }, []);
 
-  const { pizzeriaOrders, restaurantOrders } = useMemo(() => {
-    const pizzeria: { order: Order; items: OrderItem[] }[] = [];
-    const restaurant: { order: Order; items: OrderItem[] }[] = [];
+  const ordersByStation = useMemo(() => {
+    const result: Record<KitchenStation, { order: Order; items: OrderItem[] }[]> = {
+      pizzeria: [],
+      restaurant: [],
+      bar: [],
+    };
 
     for (const order of orders) {
-      const pizzaItems = order.orderItems.filter(isPizzaItem);
-      const restaurantItems = order.orderItems.filter((oi) => !isPizzaItem(oi));
-
-      if (pizzaItems.length > 0) {
-        const allPizzaDone = pizzaItems.every((oi) => oi.status === "DONE");
-        if (!allPizzaDone) pizzeria.push({ order, items: pizzaItems });
-      }
-
-      if (restaurantItems.length > 0) {
-        const allRestaurantDone = restaurantItems.every((oi) => oi.status === "DONE");
-        if (!allRestaurantDone) restaurant.push({ order, items: restaurantItems });
+      for (const station of STATIONS) {
+        const stationItems = itemsForStation(order, station);
+        if (stationItems.length === 0) continue;
+        const allDone = stationItems.every((oi) => oi.status === "DONE");
+        if (!allDone) result[station].push({ order, items: stationItems });
       }
     }
 
-    return { pizzeriaOrders: pizzeria, restaurantOrders: restaurant };
+    return result;
   }, [orders]);
 
-  const displayOrders = activeTab === "pizzeria" ? pizzeriaOrders : restaurantOrders;
+  const displayOrders = ordersByStation[activeTab];
 
   if (loading) {
     return (
@@ -87,38 +91,36 @@ export default function KitchenPage() {
     <div className="p-8">
       <h1 className="mb-2 text-2xl font-bold text-dark-900">Écran cuisine</h1>
       <p className="mb-6 text-sm text-dark-500">
-        Rafraîchissement automatique toutes les 10 secondes. Une commande avec pizza + plat apparaît dans les deux onglets.
+        Rafraîchissement automatique toutes les 10 secondes. Pizza, plats et boissons sont
+        répartis par poste (Pizzeria, Restaurant, Bar).
       </p>
 
-      <div className="mb-6 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("pizzeria")}
-          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-            activeTab === "pizzeria"
-              ? "bg-primary-500 text-white"
-              : "bg-white text-dark-600 shadow-card hover:bg-dark-50"
-          }`}
-        >
-          Pizzeria
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("restaurant")}
-          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-            activeTab === "restaurant"
-              ? "bg-primary-500 text-white"
-              : "bg-white text-dark-600 shadow-card hover:bg-dark-50"
-          }`}
-        >
-          Restaurant
-        </button>
+      <div className="mb-6 flex flex-wrap gap-2">
+        {STATIONS.map((station) => (
+          <button
+            key={station}
+            type="button"
+            onClick={() => setActiveTab(station)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === station
+                ? "bg-primary-500 text-white"
+                : "bg-white text-dark-600 shadow-card hover:bg-dark-50"
+            }`}
+          >
+            {KITCHEN_STATION_LABELS[station]}
+            {ordersByStation[station].length > 0 && (
+              <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                {ordersByStation[station].length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {displayOrders.length === 0 ? (
           <p className="col-span-full py-16 text-center text-dark-500">
-            Aucune commande en attente dans {activeTab === "pizzeria" ? "la pizzeria" : "le restaurant"}.
+            Aucune commande en attente au {KITCHEN_STATION_LABELS[activeTab].toLowerCase()}.
           </p>
         ) : (
           displayOrders.map(({ order, items }) => (

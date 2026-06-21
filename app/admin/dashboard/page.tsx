@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay } from "date-fns";
+import { startOfDay, format } from "date-fns";
 import Link from "next/link";
 import { DeleteOrderButton } from "@/components/admin/DeleteOrderButton";
 import { AutoRefresh } from "@/components/admin/AutoRefresh";
 import { DashboardWithTabs } from "@/components/admin/DashboardWithTabs";
+import { ExportSalesButton } from "@/components/admin/ExportSalesButton";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -93,6 +94,9 @@ export default async function DashboardPage() {
   return (
     <DashboardWithTabs canManageHours={canManageHours}>
       <AutoRefresh intervalSeconds={10} />
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
+        <ExportSalesButton date={format(today, "yyyy-MM-dd")} />
+      </div>
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
         {stats.map((s) => (
           <div key={s.label} className="card group overflow-hidden">

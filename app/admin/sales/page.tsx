@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { SalesFilters } from "@/components/admin/SalesFilters";
+import { ExportSalesButton } from "@/components/admin/ExportSalesButton";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,10 @@ export default async function SalesPage({
 
   return (
     <div className="p-8">
-      <h1 className="mb-6 text-2xl font-bold text-dark-900">Ventes</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-dark-900">Ventes</h1>
+        <ExportSalesButton date={format(selectedDate, "yyyy-MM-dd")} />
+      </div>
       <SalesFilters defaultDate={date ?? format(new Date(), "yyyy-MM-dd")} />
       <div className="card mt-6 mb-6">
         <p className="text-sm font-medium text-dark-500">
