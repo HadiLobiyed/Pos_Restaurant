@@ -32,10 +32,12 @@ export type MenuMode = "table" | "takeaway" | "delivery";
 
 export function MenuClient({
   tableId,
+  orderCode,
   mode,
   items,
 }: {
   tableId: string | null;
+  orderCode: string | null;
   mode: MenuMode;
   items: Item[];
 }) {
@@ -50,10 +52,10 @@ export function MenuClient({
 
   const orderContext: OrderContext | null = useMemo(() => {
     if (mode === "table" && tableId) return { kind: "table", tableId };
-    if (mode === "takeaway") return { kind: "takeaway" };
-    if (mode === "delivery") return { kind: "delivery" };
+    if (mode === "takeaway") return { kind: "takeaway", appendToCode: orderCode ?? undefined };
+    if (mode === "delivery") return { kind: "delivery", appendToCode: orderCode ?? undefined };
     return null;
-  }, [mode, tableId]);
+  }, [mode, tableId, orderCode]);
 
   const categories = useMemo(() => {
     const map = new Map<string, string>();

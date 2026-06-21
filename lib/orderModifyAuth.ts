@@ -1,18 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { findActiveUnpaidTableOrder, resolveTableId } from "@/lib/orderSession";
+import {
+  findActiveUnpaidTableOrder,
+  normalizePublicCode,
+  resolveTableId,
+} from "@/lib/orderSession";
 
 const include = {
   table: true,
   orderItems: { include: { menuItem: true } },
   payment: true,
 } as const;
-
-function normalizePublicCode(raw: string): string {
-  const s = raw.trim().toUpperCase().replace(/\s+/g, "");
-  if (/^CMD-\d{6}$/.test(s)) return s;
-  if (/^\d{6}$/.test(s)) return `CMD-${s}`;
-  return s;
-}
 
 /** Authentification légère pour suivi / modification publique */
 export async function loadOrderForModify(searchParams: URLSearchParams) {

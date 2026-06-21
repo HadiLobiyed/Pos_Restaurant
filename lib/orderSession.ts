@@ -2,6 +2,13 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
+export function normalizePublicCode(raw: string): string {
+  const s = raw.trim().toUpperCase().replace(/\s+/g, "");
+  if (/^CMD-\d{6}$/.test(s)) return s;
+  if (/^\d{6}$/.test(s)) return `CMD-${s}`;
+  return s;
+}
+
 export async function resolveTableId(db: Db, tableIdOrNumber: string): Promise<string | null> {
   const raw = tableIdOrNumber.trim();
   if (!raw) return null;
@@ -22,6 +29,24 @@ export async function findActiveUnpaidTableOrder(db: Db, tableId: string) {
     where: {
       tableId,
       channel: "DINE_IN",
+      payment: { status: "UNPAID" },
+    },
+    include: {
+      table: true,
+      payment: true,
+      orderItems: { include: { menuItem: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** Commande à emporter / livraison encore impayée (additions jusqu'au paiement). */
+export async function findActiveUnpaidOrderByCode(db: Db, codeRaw: string) {
+  const normalized = normalizePublicCode(codeRaw);
+  return db.order.findFirst({
+    where: {
+      publicCode: normalized,
+      channel: { in: ["TAKEAWAY", "DELIVERY"] },
       payment: { status: "UNPAID" },
     },
     include: {

@@ -318,16 +318,29 @@ function ModifyContent() {
               <span>{data.total.toFixed(2)} DA</span>
             </div>
 
-            {data.tableId && (
+            {(data.tableId || data.publicCode) && (
               <Link
-                href={`/menu?table=${encodeURIComponent(data.tableId)}`}
+                href={
+                  data.tableId
+                    ? `/menu?table=${encodeURIComponent(data.tableId)}`
+                    : `/menu?code=${encodeURIComponent(data.publicCode!)}`
+                }
                 className="block w-full rounded-xl bg-primary-500 py-3 text-center font-semibold text-white hover:bg-primary-400"
               >
                 Ajouter des plats
               </Link>
             )}
 
-            <Link href="/suivi" className="block w-full rounded-xl border border-white/30 py-3 text-center text-white">
+            <Link
+              href={
+                data.tableId
+                  ? `/suivi?table=${encodeURIComponent(data.tableId)}`
+                  : data.publicCode
+                    ? `/suivi?code=${encodeURIComponent(data.publicCode)}`
+                    : "/suivi"
+              }
+              className="block w-full rounded-xl border border-white/30 py-3 text-center text-white"
+            >
               Suivre ma commande
             </Link>
 

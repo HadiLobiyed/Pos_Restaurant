@@ -29,8 +29,8 @@ async function copyToClipboard(text: string): Promise<boolean> {
 
 export type OrderContext =
   | { kind: "table"; tableId: string }
-  | { kind: "takeaway" }
-  | { kind: "delivery" };
+  | { kind: "takeaway"; appendToCode?: string }
+  | { kind: "delivery"; appendToCode?: string };
 
 export function CartDrawer({
   open,
@@ -52,7 +52,7 @@ export function CartDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [publicCode, setPublicCode] = useState<string | null>(null);
-  const [mergedToTable, setMergedToTable] = useState(false);
+  const [mergedToExisting, setMergedToExisting] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [error, setError] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -65,6 +65,10 @@ export function CartDrawer({
     return sum + (c.price + supSum) * c.quantity;
   }, 0);
   const isDelivery = orderContext.kind === "delivery";
+  const isAppending =
+    orderContext.kind === "takeaway" || orderContext.kind === "delivery"
+      ? !!orderContext.appendToCode
+      : false;
   const [editingSuppsFor, setEditingSuppsFor] = useState<string | null>(null);
 
   useEffect(() => {
@@ -92,7 +96,7 @@ export function CartDrawer({
 
   async function handlePlaceOrder() {
     if (cart.length === 0) return;
-    if (isDelivery) {
+    if (isDelivery && !isAppending) {
       if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
         setError("Renseignez nom, téléphone et adresse.");
         return;
@@ -132,11 +136,16 @@ export function CartDrawer({
       payload.tableId = orderContext.tableId;
     } else if (orderContext.kind === "takeaway") {
       payload.channel = "TAKEAWAY";
+      if (orderContext.appendToCode) payload.code = orderContext.appendToCode;
     } else {
       payload.channel = "DELIVERY";
-      payload.customerName = customerName.trim();
-      payload.customerPhone = customerPhone.trim();
-      payload.customerAddress = customerAddress.trim();
+      if (orderContext.appendToCode) {
+        payload.code = orderContext.appendToCode;
+      } else {
+        payload.customerName = customerName.trim();
+        payload.customerPhone = customerPhone.trim();
+        payload.customerAddress = customerAddress.trim();
+      }
     }
 
     const res = await fetch("/api/orders", {
@@ -156,14 +165,19 @@ export function CartDrawer({
     }
     const data = await res.json();
     setPublicCode(typeof data?.publicCode === "string" ? data.publicCode : null);
-    setMergedToTable(orderContext.kind === "table" && !data?.publicCode);
+    setMergedToExisting(
+      orderContext.kind === "table"
+        ? !data?.publicCode
+        : !!(orderContext.kind === "takeaway" || orderContext.kind === "delivery") &&
+          !!orderContext.appendToCode
+    );
     setSuccess(true);
     onOrderPlaced();
     setTimeout(() => {
       onClose();
       setSuccess(false);
       setPublicCode(null);
-      setMergedToTable(false);
+      setMergedToExisting(false);
       setCustomerName("");
       setCustomerPhone("");
       setCustomerAddress("");
@@ -230,11 +244,12 @@ export function CartDrawer({
                   </div>
                   <p className="mt-3 text-xs text-dark-500">Présentez ce code au comptoir.</p>
                 </div>
-              ) : mergedToTable ? (
+              ) : mergedToExisting ? (
                 <div className="rounded-2xl border-2 border-primary-200 bg-primary-50 p-6 space-y-3">
                   <p className="text-sm text-dark-700">
-                    Vos plats ont été ajoutés à la commande de votre table. Le ticket final regroupe toutes les
-                    commandes jusqu&apos;au paiement.
+                    {orderContext.kind === "table"
+                      ? "Vos plats ont été ajoutés à la commande de votre table. Le ticket final regroupe toutes les commandes jusqu&apos;au paiement."
+                      : "Vos plats ont été ajoutés à votre commande en cours."}
                   </p>
                   {orderContext.kind === "table" && (
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
@@ -252,6 +267,23 @@ export function CartDrawer({
                       </Link>
                     </div>
                   )}
+                  {(orderContext.kind === "takeaway" || orderContext.kind === "delivery") &&
+                    orderContext.appendToCode && (
+                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                        <Link
+                          href={`/suivi?code=${encodeURIComponent(orderContext.appendToCode)}`}
+                          className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500"
+                        >
+                          Suivre ma commande
+                        </Link>
+                        <Link
+                          href={`/modifier?code=${encodeURIComponent(orderContext.appendToCode)}`}
+                          className="rounded-xl border border-primary-300 px-4 py-2 text-sm font-semibold text-primary-800 hover:bg-white"
+                        >
+                          Modifier
+                        </Link>
+                      </div>
+                    )}
                 </div>
               ) : (
                 <p className="text-sm text-dark-500">Merci — la cuisine a bien reçu votre commande.</p>
@@ -259,7 +291,7 @@ export function CartDrawer({
             </div>
           ) : (
             <>
-              {isDelivery && (
+              {isDelivery && !isAppending && (
                 <div className="space-y-3 rounded-xl border border-dark-200 bg-dark-50/50 p-4 mb-2">
                   <p className="text-sm font-semibold text-dark-800">Livraison</p>
                   <input

@@ -12,6 +12,7 @@ import {
 } from "@/lib/openingHours";
 import {
   appendItemsToOrder,
+  findActiveUnpaidOrderByCode,
   findActiveUnpaidTableOrder,
   resolveTableId,
   sumCartItems,
@@ -30,6 +31,7 @@ const createSchema = z
   .object({
     channel: z.enum(["DINE_IN", "TAKEAWAY", "DELIVERY"]).optional(),
     tableId: z.string().optional(),
+    code: z.string().optional(),
     items: z.array(itemSchema),
     customerName: z.string().optional(),
     customerPhone: z.string().optional(),
@@ -82,7 +84,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
 
     const channel = parsed.data.channel ?? "DINE_IN";
-    const { tableId, items, customerName, customerPhone, customerAddress } = parsed.data;
+    const { tableId, code, items, customerName, customerPhone, customerAddress } = parsed.data;
 
     if (channel === "DELIVERY" && !session) {
       if (!customerName?.trim() || !customerPhone?.trim() || !customerAddress?.trim()) {
@@ -147,6 +149,33 @@ export async function POST(req: Request) {
         }
       }
 
+      if ((channel === "TAKEAWAY" || channel === "DELIVERY") && code?.trim()) {
+        const existing = await findActiveUnpaidOrderByCode(tx, code);
+        if (!existing) {
+          const err = new Error("ORDER_CODE_NOT_FOUND");
+          err.name = "OrderCodeNotFoundError";
+          throw err;
+        }
+        if (existing.channel !== channel) {
+          const err = new Error("ORDER_CHANNEL_MISMATCH");
+          err.name = "OrderChannelMismatchError";
+          throw err;
+        }
+        await appendItemsToOrder(tx, existing.id, items);
+        const allItems = await tx.orderItem.findMany({
+          where: { orderId: existing.id },
+          include: { menuItem: true },
+        });
+        await tx.payment.update({
+          where: { orderId: existing.id },
+          data: { total: sumOrderItemsFromDb(allItems) },
+        });
+        return tx.order.findUnique({
+          where: { id: existing.id },
+          include: { table: true, orderItems: { include: { menuItem: true } } },
+        });
+      }
+
       const publicCode =
         channel === "TAKEAWAY" || channel === "DELIVERY" ? await generateUniquePublicCode(tx) : null;
 
@@ -179,6 +208,15 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "TABLE_NOT_FOUND") {
       return NextResponse.json({ error: "Table introuvable. Scannez le QR code de votre table." }, { status: 400 });
+    }
+    if (error instanceof Error && error.message === "ORDER_CODE_NOT_FOUND") {
+      return NextResponse.json(
+        { error: "Commande introuvable ou déjà payée. Vérifiez votre code." },
+        { status: 404 }
+      );
+    }
+    if (error instanceof Error && error.message === "ORDER_CHANNEL_MISMATCH") {
+      return NextResponse.json({ error: "Ce code ne correspond pas au mode de commande choisi." }, { status: 400 });
     }
     const msg = error instanceof Error ? error.message : "Internal server error";
     console.error("POST /api/orders error:", error);

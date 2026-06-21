@@ -122,6 +122,7 @@ function TrackResultSummary({ data }: { data: TrackPayload }) {
 function SuiviContent() {
   const searchParams = useSearchParams();
   const tableFromUrl = searchParams.get("table");
+  const codeFromUrl = searchParams.get("code");
 
   const [step, setStep] = useState<TrackStep>("home");
   const [codeInput, setCodeInput] = useState("");
@@ -159,11 +160,31 @@ function SuiviContent() {
     [fetchTrack]
   );
 
+  const openCodeTrack = useCallback(
+    async (code: string) => {
+      setError("");
+      setLoading(true);
+      try {
+        const payload = await fetchTrack("code", code);
+        setData(payload);
+        setQuery({ kind: "code", value: code });
+        setStep("result");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erreur.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchTrack]
+  );
+
   useEffect(() => {
     if (tableFromUrl && step === "home") {
       openTableTrack(tableFromUrl);
+    } else if (codeFromUrl && step === "home") {
+      openCodeTrack(codeFromUrl);
     }
-  }, [tableFromUrl, step, openTableTrack]);
+  }, [tableFromUrl, codeFromUrl, step, openTableTrack, openCodeTrack]);
 
   useEffect(() => {
     if (step !== "result" || !query) return;
@@ -226,7 +247,7 @@ function SuiviContent() {
 
         {step === "home" && (
           <div className="rounded-2xl border-2 border-white/20 bg-white/10 p-8 text-center backdrop-blur">
-            {loading && tableFromUrl ? (
+            {loading && (tableFromUrl || codeFromUrl) ? (
               <p className="text-dark-200">Chargement de votre commande…</p>
             ) : (
               <>
