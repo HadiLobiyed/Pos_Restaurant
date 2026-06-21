@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type OpeningHoursState = {
   open: boolean | null;
@@ -9,7 +9,14 @@ type OpeningHoursState = {
   timeZone: string | null;
 };
 
-export function useRestaurantOpen(pollMs = 60_000): OpeningHoursState {
+async function fetchOpeningHours(): Promise<Response> {
+  return fetch("/api/opening-hours", {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache" },
+  });
+}
+
+export function useRestaurantOpen(pollMs = 15_000): OpeningHoursState {
   const [state, setState] = useState<OpeningHoursState>({
     open: null,
     loading: true,
@@ -17,34 +24,40 @@ export function useRestaurantOpen(pollMs = 60_000): OpeningHoursState {
     timeZone: null,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch("/api/opening-hours");
-        const d = await res.json();
-        if (cancelled) return;
-        setState({
-          open: d.open !== false,
-          loading: false,
-          hoursToday: typeof d.hoursToday === "string" ? d.hoursToday : null,
-          timeZone: typeof d.timeZone === "string" ? d.timeZone : null,
-        });
-      } catch {
-        if (!cancelled) {
-          setState({ open: true, loading: false, hoursToday: null, timeZone: null });
-        }
-      }
+  const load = useCallback(async () => {
+    try {
+      const res = await fetchOpeningHours();
+      const d = await res.json();
+      setState({
+        open: d.open !== false,
+        loading: false,
+        hoursToday: typeof d.hoursToday === "string" ? d.hoursToday : null,
+        timeZone: typeof d.timeZone === "string" ? d.timeZone : null,
+      });
+    } catch {
+      setState({ open: true, loading: false, hoursToday: null, timeZone: null });
     }
+  }, []);
 
+  useEffect(() => {
     void load();
-    const t = setInterval(load, pollMs);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
+
+    const interval = setInterval(() => void load(), pollMs);
+
+    const onFocus = () => void load();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
     };
-  }, [pollMs]);
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load, pollMs]);
 
   return state;
 }

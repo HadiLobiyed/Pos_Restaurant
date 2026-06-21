@@ -67,7 +67,7 @@ export function CartDrawer({
 
   useEffect(() => {
     if (!open) return;
-    fetch("/api/opening-hours")
+    fetch("/api/opening-hours", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setRestaurantOpen(d.open !== false))
       .catch(() => setRestaurantOpen(true));
@@ -98,7 +98,7 @@ export function CartDrawer({
     }
     setError("");
     try {
-      const oh = await fetch("/api/opening-hours").then((r) => r.json());
+      const oh = await fetch("/api/opening-hours", { cache: "no-store" }).then((r) => r.json());
       if (oh.open === false) {
         setError(CLOSED_NOW_MESSAGE);
         setRestaurantOpen(false);

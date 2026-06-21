@@ -14,6 +14,13 @@ export function emptyWeekSchedule(): WeekSchedule {
   return s;
 }
 
+/** Fusionne les horaires en base avec les valeurs par défaut (jours manquants). */
+export function mergeWeekSchedule(raw: unknown): WeekSchedule {
+  const base = emptyWeekSchedule();
+  if (raw == null || typeof raw !== "object") return base;
+  return { ...base, ...(raw as WeekSchedule) };
+}
+
 function timeToMinutes(hhmm: string): number {
   const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return NaN;

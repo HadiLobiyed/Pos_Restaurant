@@ -42,7 +42,9 @@ export default function ReserverPage() {
     }
     setSlotsLoading(true);
     setError("");
-    const res = await fetch(`/api/reservations/availability?date=${encodeURIComponent(date)}`);
+    const res = await fetch(`/api/reservations/availability?date=${encodeURIComponent(date)}`, {
+      cache: "no-store",
+    });
     setSlotsLoading(false);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));

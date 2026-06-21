@@ -6,6 +6,7 @@ import {
   CLOSED_NOW_MESSAGE,
   isDateOpenDay,
   isRestaurantOpenNow,
+  mergeWeekSchedule,
   validateWeekSchedule,
   type WeekSchedule,
 } from "@/lib/openingHours";
@@ -19,7 +20,9 @@ const schema = z.object({
   message: z.string().optional(),
 });
 
-/** Demande de réservation (public, sans auth) */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -40,12 +43,13 @@ export async function POST(req: Request) {
     } catch (e) {
       console.warn("POST /api/reservations — openingHours introuvables.", e);
     }
-    const allowedSlots = generateSlotTimesForDate(reservationDate, openingHours as WeekSchedule | null, tz);
+    const merged = mergeWeekSchedule(openingHours);
+    const allowedSlots = generateSlotTimesForDate(reservationDate, merged, tz);
     if (!allowedSlots.includes(reservationTime)) {
       return NextResponse.json({ error: "Créneau horaire invalide." }, { status: 400 });
     }
 
-    const schedule = validateWeekSchedule(openingHours) ? (openingHours as WeekSchedule) : null;
+    const schedule = validateWeekSchedule(merged) ? merged : null;
     if (!isDateOpenDay(reservationDate, schedule, tz)) {
       return NextResponse.json({ error: "Le restaurant est fermé ce jour-là." }, { status: 400 });
     }

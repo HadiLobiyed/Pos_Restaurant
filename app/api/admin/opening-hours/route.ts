@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { emptyWeekSchedule, validateWeekSchedule, type WeekSchedule } from "@/lib/openingHours";
-
-function mergeSchedule(raw: unknown): WeekSchedule {
-  const base = emptyWeekSchedule();
-  if (raw == null || typeof raw !== "object") return base;
-  return { ...base, ...(raw as WeekSchedule) };
-}
+import { mergeWeekSchedule, validateWeekSchedule, type WeekSchedule } from "@/lib/openingHours";
 
 const SETTINGS_ID = "default";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -18,7 +16,7 @@ export async function GET() {
 
   try {
     const row = await prisma.restaurantSettings.findUnique({ where: { id: SETTINGS_ID } });
-    const openingHours = mergeSchedule(row?.openingHours ?? null);
+    const openingHours = mergeWeekSchedule(row?.openingHours ?? null);
     return NextResponse.json({ openingHours, timeZone: process.env.RESTAURANT_TZ || "UTC" });
   } catch (e) {
     console.error("GET /api/admin/opening-hours", e);
@@ -44,6 +42,12 @@ export async function PUT(req: Request) {
       create: { id: SETTINGS_ID, openingHours: oh },
       update: { openingHours: oh },
     });
+
+    revalidatePath("/commander");
+    revalidatePath("/menu");
+    revalidatePath("/reserver");
+    revalidatePath("/api/opening-hours");
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("PUT /api/admin/opening-hours", e);

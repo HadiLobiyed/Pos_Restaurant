@@ -4,7 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { isRestaurantOpenNow, CLOSED_NOW_MESSAGE, type WeekSchedule } from "@/lib/openingHours";
+import {
+  CLOSED_NOW_MESSAGE,
+  isRestaurantOpenNow,
+  mergeWeekSchedule,
+  validateWeekSchedule,
+} from "@/lib/openingHours";
 
 const itemSchema = z.object({
   menuItemId: z.string(),
@@ -88,7 +93,8 @@ export async function POST(req: Request) {
     if (!session) {
       try {
         const settings = await prisma.restaurantSettings.findUnique({ where: { id: "default" } });
-        const schedule = (settings?.openingHours as WeekSchedule | null) ?? null;
+        const merged = mergeWeekSchedule(settings?.openingHours ?? null);
+        const schedule = validateWeekSchedule(merged) ? merged : null;
         const tz = process.env.RESTAURANT_TZ || "UTC";
         if (!isRestaurantOpenNow(schedule, tz)) {
           return NextResponse.json({ error: CLOSED_NOW_MESSAGE }, { status: 403 });

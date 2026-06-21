@@ -4,9 +4,17 @@ import { generateSlotTimesForDate, MAX_RESERVATIONS_PER_SLOT } from "@/lib/reser
 import {
   filterPastSlotsForToday,
   isDateOpenDay,
+  mergeWeekSchedule,
   validateWeekSchedule,
   type WeekSchedule,
 } from "@/lib/openingHours";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+};
 
 /** Créneaux disponibles pour une date (YYYY-MM-DD) — public */
 export async function GET(req: Request) {
@@ -38,15 +46,19 @@ export async function GET(req: Request) {
       console.warn("GET /api/reservations/availability — openingHours introuvables.", e);
     }
 
-    const slots = generateSlotTimesForDate(dateStr, openingHours as WeekSchedule | null, tz);
+    const merged = mergeWeekSchedule(openingHours);
+    const slots = generateSlotTimesForDate(dateStr, merged, tz);
 
-    const schedule = validateWeekSchedule(openingHours) ? (openingHours as WeekSchedule) : null;
+    const schedule = validateWeekSchedule(merged) ? merged : null;
     if (!isDateOpenDay(dateStr, schedule, tz)) {
-      return NextResponse.json({
-        date: dateStr,
-        dayClosed: true,
-        slots: [],
-      });
+      return NextResponse.json(
+        {
+          date: dateStr,
+          dayClosed: true,
+          slots: [],
+        },
+        { headers: NO_CACHE_HEADERS }
+      );
     }
 
     const slotsFiltered = filterPastSlotsForToday(dateStr, slots, tz);
@@ -82,7 +94,7 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ date: dateStr, slots: availability });
+    return NextResponse.json({ date: dateStr, slots: availability }, { headers: NO_CACHE_HEADERS });
   } catch (e) {
     console.error("GET /api/reservations/availability", e);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
