@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import {
   uploadMenuImageViaApi,
@@ -60,6 +61,14 @@ export function MenuItemForm({
     }
   }, [editingItem, categories]);
 
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   async function handleImageSelected(file: File) {
     setError("");
     setUploadingImage(true);
@@ -118,9 +127,13 @@ export function MenuItemForm({
     onSaved();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 w-full max-w-md rounded-2xl bg-white p-6 shadow-elevated">
+  const modal = (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="max-h-[min(90dvh,900px)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-white p-6 shadow-elevated">
         <h3 className="mb-4 text-lg font-semibold text-dark-900">
           {editingItem ? "Modifier l'article" : "Nouvel article"}
         </h3>
@@ -258,4 +271,7 @@ export function MenuItemForm({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(modal, document.body);
 }
