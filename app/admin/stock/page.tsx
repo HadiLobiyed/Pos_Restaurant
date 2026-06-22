@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { MenuItemForm } from "@/components/admin/MenuItemForm";
+import { StockPurchaseFilters } from "@/components/admin/StockPurchaseFilters";
 import { isBeverageCategory } from "@/lib/beverages";
 import { STOCK_UNITS } from "@/lib/stockUnits";
 
@@ -43,7 +47,16 @@ function qtyClass(qty: number): string {
   return "text-dark-800 font-semibold";
 }
 
-export default function StockPage() {
+export function StockPageClient() {
+  const searchParams = useSearchParams();
+  const selectedDate = searchParams.get("date") ?? format(new Date(), "yyyy-MM-dd");
+  const selectedDateLabel = useMemo(() => {
+    const d = new Date(selectedDate);
+    return Number.isNaN(d.getTime())
+      ? selectedDate
+      : format(d, "d MMMM yyyy", { locale: fr });
+  }, [selectedDate]);
+
   const [tab, setTab] = useState<Tab>("ingredients");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,7 +101,7 @@ export default function StockPage() {
   }, []);
 
   const loadPurchases = useCallback(async () => {
-    const res = await fetch("/api/admin/stock/purchases");
+    const res = await fetch(`/api/admin/stock/purchases?date=${selectedDate}`);
     if (!res.ok) return;
     const data = await res.json();
     setPurchases(data.purchases ?? []);
@@ -96,23 +109,27 @@ export default function StockPage() {
       totalProducts: data.totalProducts ?? 0,
       totalSpent: data.totalSpent ?? 0,
     });
-  }, []);
+  }, [selectedDate]);
 
   const reload = useCallback(async () => {
     setError("");
     setLoading(true);
     try {
-      await Promise.all([loadIngredients(), loadBeverages(), loadCategories(), loadPurchases()]);
+      await Promise.all([loadIngredients(), loadBeverages(), loadCategories()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur.");
     } finally {
       setLoading(false);
     }
-  }, [loadIngredients, loadBeverages, loadCategories, loadPurchases]);
+  }, [loadIngredients, loadBeverages, loadCategories]);
 
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    loadPurchases();
+  }, [loadPurchases]);
 
   async function createIngredient(e: React.FormEvent) {
     e.preventDefault();
@@ -193,37 +210,58 @@ export default function StockPage() {
         Ingrédients (hors menu) et boissons du menu. Les boissons en rupture deviennent invisibles pour le client.
       </p>
 
+      <div className="mb-6 rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
+        <h2 className="mb-4 text-sm font-semibold text-dark-800">Historique des achats</h2>
+        <StockPurchaseFilters selectedDate={selectedDate} />
+      </div>
+
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
-          <p className="text-sm font-medium text-dark-500">Achats du jour — produits</p>
+          <p className="text-sm font-medium text-dark-500">
+            Produits achetés — {selectedDateLabel}
+          </p>
           <p className="mt-1 text-2xl font-bold text-dark-900">{purchaseTotals.totalProducts}</p>
         </div>
         <div className="rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
-          <p className="text-sm font-medium text-dark-500">Achats du jour — dépenses</p>
+          <p className="text-sm font-medium text-dark-500">
+            Dépenses — {selectedDateLabel}
+          </p>
           <p className="mt-1 text-2xl font-bold text-primary-600">
             {purchaseTotals.totalSpent.toFixed(2)} DA
           </p>
         </div>
       </div>
 
-      {purchases.length > 0 && (
-        <div className="mb-6 overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-card">
-          <div className="border-b border-dark-200 bg-dark-50 px-4 py-3">
-            <p className="text-sm font-semibold text-dark-700">Détail des achats du jour</p>
-          </div>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-dark-200 text-dark-600">
+      <div className="mb-6 overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-card">
+        <div className="border-b border-dark-200 bg-dark-50 px-4 py-3">
+          <p className="text-sm font-semibold text-dark-700">
+            Détail des achats — {selectedDateLabel}
+          </p>
+        </div>
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-dark-200 text-dark-600">
+            <tr>
+              <th className="px-4 py-2 font-semibold">Heure</th>
+              <th className="px-4 py-2 font-semibold">Produit</th>
+              <th className="px-4 py-2 font-semibold">Type</th>
+              <th className="px-4 py-2 font-semibold">Qté</th>
+              <th className="px-4 py-2 font-semibold">P.U.</th>
+              <th className="px-4 py-2 font-semibold">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {purchases.length === 0 ? (
               <tr>
-                <th className="px-4 py-2 font-semibold">Produit</th>
-                <th className="px-4 py-2 font-semibold">Type</th>
-                <th className="px-4 py-2 font-semibold">Qté</th>
-                <th className="px-4 py-2 font-semibold">P.U.</th>
-                <th className="px-4 py-2 font-semibold">Total</th>
+                <td colSpan={6} className="px-4 py-8 text-center text-dark-500">
+                  Aucun achat pour cette date.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {purchases.map((p) => (
+            ) : (
+              purchases.map((p) => (
                 <tr key={p.id} className="border-b border-dark-100 last:border-0">
+                  <td className="px-4 py-2 text-dark-600">
+                    {format(new Date(p.createdAt), "HH:mm")}
+                  </td>
                   <td className="px-4 py-2 font-medium text-dark-900">{p.itemName}</td>
                   <td className="px-4 py-2 text-dark-600">
                     {p.type === "beverage" ? "Boisson" : "Ingrédient"}
@@ -232,11 +270,11 @@ export default function StockPage() {
                   <td className="px-4 py-2">{Number(p.unitPrice).toFixed(2)} DA</td>
                   <td className="px-4 py-2 font-semibold">{Number(p.totalCost).toFixed(2)} DA</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {error && (
         <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
@@ -499,5 +537,21 @@ export default function StockPage() {
         />
       )}
     </div>
+  );
+}
+
+function StockPageFallback() {
+  return (
+    <div className="flex items-center justify-center p-8">
+      <p className="text-dark-500">Chargement du stock…</p>
+    </div>
+  );
+}
+
+export default function StockPage() {
+  return (
+    <Suspense fallback={<StockPageFallback />}>
+      <StockPageClient />
+    </Suspense>
   );
 }

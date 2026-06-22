@@ -11,6 +11,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const dateStr = searchParams.get("date");
   const day = dateStr ? new Date(dateStr) : new Date();
+  if (Number.isNaN(day.getTime())) {
+    return NextResponse.json({ error: "Date invalide" }, { status: 400 });
+  }
   const dayStart = startOfDay(day);
   const dayEnd = endOfDay(day);
 
