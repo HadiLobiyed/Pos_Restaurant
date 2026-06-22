@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { applyStockUpdate } from "@/lib/menuItemStock";
 
 const updateSchema = z.object({
   orderId: z.string(),
@@ -53,10 +54,7 @@ export async function PATCH(req: Request) {
         const stock = oi.menuItem.stock;
         if (stock != null) {
           const newStock = Math.max(0, stock - oi.quantity);
-          await tx.menuItem.update({
-            where: { id: oi.menuItemId },
-            data: { stock: newStock },
-          });
+          await applyStockUpdate(tx, oi.menuItemId, newStock);
         }
       }
     }

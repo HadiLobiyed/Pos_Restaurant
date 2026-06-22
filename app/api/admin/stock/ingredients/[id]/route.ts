@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { recordStockPurchase } from "@/lib/stockPurchase";
 
 const patchSchema = z.object({
   delta: z.coerce.number().int().optional(),
@@ -32,13 +33,29 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       nextQty = Math.max(0, current.quantity + parsed.data.delta);
     }
 
-    const row = await prisma.stockIngredient.update({
-      where: { id: params.id },
-      data: {
-        quantity: nextQty,
-        ...(parsed.data.name != null ? { name: parsed.data.name.trim() } : {}),
-        ...(parsed.data.unit !== undefined ? { unit: parsed.data.unit?.trim() || null } : {}),
-      },
+    const addedQty = nextQty - current.quantity;
+
+    const row = await prisma.$transaction(async (tx) => {
+      if (addedQty > 0) {
+        const unitPrice = Number(current.unitPrice ?? 0);
+        if (unitPrice > 0) {
+          await recordStockPurchase(tx, {
+            type: "ingredient",
+            itemId: current.id,
+            itemName: current.name,
+            quantity: addedQty,
+            unitPrice,
+          });
+        }
+      }
+      return tx.stockIngredient.update({
+        where: { id: params.id },
+        data: {
+          quantity: nextQty,
+          ...(parsed.data.name != null ? { name: parsed.data.name.trim() } : {}),
+          ...(parsed.data.unit !== undefined ? { unit: parsed.data.unit?.trim() || null } : {}),
+        },
+      });
     });
     return NextResponse.json(row);
   } catch (e) {

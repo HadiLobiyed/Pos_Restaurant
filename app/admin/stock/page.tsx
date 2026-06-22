@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MenuItemForm } from "@/components/admin/MenuItemForm";
 import { isBeverageCategory } from "@/lib/beverages";
+import { STOCK_UNITS } from "@/lib/stockUnits";
 
 type Category = { id: string; name: string };
 
@@ -11,6 +12,7 @@ type StockIngredient = {
   name: string;
   quantity: number;
   unit: string | null;
+  unitPrice: { toString(): string } | null;
 };
 
 type BeverageItem = {
@@ -18,8 +20,19 @@ type BeverageItem = {
   name: string;
   description: string | null;
   price: { toString(): string };
+  purchasePrice: { toString(): string } | null;
   stock: number | null;
   category: { name: string };
+};
+
+type StockPurchase = {
+  id: string;
+  type: string;
+  itemName: string;
+  quantity: number;
+  unitPrice: { toString(): string };
+  totalCost: { toString(): string };
+  createdAt: string;
 };
 
 type Tab = "ingredients" | "beverages";
@@ -42,7 +55,11 @@ export default function StockPage() {
 
   const [newIngName, setNewIngName] = useState("");
   const [newIngQty, setNewIngQty] = useState("0");
-  const [newIngUnit, setNewIngUnit] = useState("");
+  const [newIngUnit, setNewIngUnit] = useState<string>("kg");
+  const [newIngUnitPrice, setNewIngUnitPrice] = useState("");
+
+  const [purchases, setPurchases] = useState<StockPurchase[]>([]);
+  const [purchaseTotals, setPurchaseTotals] = useState({ totalProducts: 0, totalSpent: 0 });
 
   const beverageCategoryId = useMemo(
     () => categories.find((c) => isBeverageCategory(c.name))?.id,
@@ -70,17 +87,28 @@ export default function StockPage() {
     setBeverages(await res.json());
   }, []);
 
+  const loadPurchases = useCallback(async () => {
+    const res = await fetch("/api/admin/stock/purchases");
+    if (!res.ok) return;
+    const data = await res.json();
+    setPurchases(data.purchases ?? []);
+    setPurchaseTotals({
+      totalProducts: data.totalProducts ?? 0,
+      totalSpent: data.totalSpent ?? 0,
+    });
+  }, []);
+
   const reload = useCallback(async () => {
     setError("");
     setLoading(true);
     try {
-      await Promise.all([loadIngredients(), loadBeverages(), loadCategories()]);
+      await Promise.all([loadIngredients(), loadBeverages(), loadCategories(), loadPurchases()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur.");
     } finally {
       setLoading(false);
     }
-  }, [loadIngredients, loadBeverages, loadCategories]);
+  }, [loadIngredients, loadBeverages, loadCategories, loadPurchases]);
 
   useEffect(() => {
     reload();
@@ -88,7 +116,7 @@ export default function StockPage() {
 
   async function createIngredient(e: React.FormEvent) {
     e.preventDefault();
-    if (!newIngName.trim()) return;
+    if (!newIngName.trim() || !newIngUnitPrice.trim()) return;
     setError("");
     const res = await fetch("/api/admin/stock/ingredients", {
       method: "POST",
@@ -96,7 +124,8 @@ export default function StockPage() {
       body: JSON.stringify({
         name: newIngName.trim(),
         quantity: parseInt(newIngQty, 10) || 0,
-        unit: newIngUnit.trim() || undefined,
+        unit: newIngUnit || undefined,
+        unitPrice: parseFloat(newIngUnitPrice),
       }),
     });
     if (!res.ok) {
@@ -106,8 +135,9 @@ export default function StockPage() {
     }
     setNewIngName("");
     setNewIngQty("0");
-    setNewIngUnit("");
-    await loadIngredients();
+    setNewIngUnit("kg");
+    setNewIngUnitPrice("");
+    await Promise.all([loadIngredients(), loadPurchases()]);
   }
 
   async function adjustIngredient(id: string, delta: number) {
@@ -123,6 +153,7 @@ export default function StockPage() {
     }
     const row = await res.json();
     setIngredients((prev) => prev.map((i) => (i.id === id ? row : i)));
+    if (delta > 0) await loadPurchases();
   }
 
   async function deleteIngredient(id: string) {
@@ -144,6 +175,7 @@ export default function StockPage() {
     }
     const row = await res.json();
     setBeverages((prev) => prev.map((b) => (b.id === id ? row : b)));
+    if (delta > 0) await loadPurchases();
   }
 
   if (loading) {
@@ -158,8 +190,53 @@ export default function StockPage() {
     <div className="p-8">
       <h1 className="mb-2 text-2xl font-bold text-dark-900">Stock</h1>
       <p className="mb-6 text-sm text-dark-500">
-        Ingrédients (hors menu) et boissons du menu. Les boissons à stock 0 ne sont plus commandables en ligne.
+        Ingrédients (hors menu) et boissons du menu. Les boissons en rupture deviennent invisibles pour le client.
       </p>
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
+          <p className="text-sm font-medium text-dark-500">Achats du jour — produits</p>
+          <p className="mt-1 text-2xl font-bold text-dark-900">{purchaseTotals.totalProducts}</p>
+        </div>
+        <div className="rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
+          <p className="text-sm font-medium text-dark-500">Achats du jour — dépenses</p>
+          <p className="mt-1 text-2xl font-bold text-primary-600">
+            {purchaseTotals.totalSpent.toFixed(2)} DA
+          </p>
+        </div>
+      </div>
+
+      {purchases.length > 0 && (
+        <div className="mb-6 overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-card">
+          <div className="border-b border-dark-200 bg-dark-50 px-4 py-3">
+            <p className="text-sm font-semibold text-dark-700">Détail des achats du jour</p>
+          </div>
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-dark-200 text-dark-600">
+              <tr>
+                <th className="px-4 py-2 font-semibold">Produit</th>
+                <th className="px-4 py-2 font-semibold">Type</th>
+                <th className="px-4 py-2 font-semibold">Qté</th>
+                <th className="px-4 py-2 font-semibold">P.U.</th>
+                <th className="px-4 py-2 font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {purchases.map((p) => (
+                <tr key={p.id} className="border-b border-dark-100 last:border-0">
+                  <td className="px-4 py-2 font-medium text-dark-900">{p.itemName}</td>
+                  <td className="px-4 py-2 text-dark-600">
+                    {p.type === "beverage" ? "Boisson" : "Ingrédient"}
+                  </td>
+                  <td className="px-4 py-2">{p.quantity}</td>
+                  <td className="px-4 py-2">{Number(p.unitPrice).toFixed(2)} DA</td>
+                  <td className="px-4 py-2 font-semibold">{Number(p.totalCost).toFixed(2)} DA</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {error && (
         <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
@@ -211,12 +288,30 @@ export default function StockPage() {
                 className="input-field"
               />
             </div>
-            <div className="w-24">
+            <div className="w-28">
               <label className="mb-1 block text-xs font-semibold text-dark-600">Unité</label>
-              <input
+              <select
                 value={newIngUnit}
                 onChange={(e) => setNewIngUnit(e.target.value)}
-                placeholder="kg"
+                className="input-field"
+              >
+                {STOCK_UNITS.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-32">
+              <label className="mb-1 block text-xs font-semibold text-dark-600">Prix d&apos;achat / unité</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={newIngUnitPrice}
+                onChange={(e) => setNewIngUnitPrice(e.target.value)}
+                placeholder="DA"
+                required
                 className="input-field"
               />
             </div>
@@ -231,13 +326,14 @@ export default function StockPage() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Ingrédient</th>
                   <th className="px-4 py-3 font-semibold">Quantité</th>
+                  <th className="px-4 py-3 font-semibold">Prix / unité</th>
                   <th className="px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {ingredients.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-dark-500">
+                    <td colSpan={4} className="px-4 py-8 text-center text-dark-500">
                       Aucun ingrédient enregistré.
                     </td>
                   </tr>
@@ -249,6 +345,9 @@ export default function StockPage() {
                         {ing.unit && <span className="ml-1 text-dark-500">({ing.unit})</span>}
                       </td>
                       <td className={`px-4 py-3 ${qtyClass(ing.quantity)}`}>{ing.quantity}</td>
+                      <td className="px-4 py-3 text-dark-700">
+                        {ing.unitPrice != null ? `${Number(ing.unitPrice).toFixed(2)} DA` : "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
                           <button
@@ -313,7 +412,8 @@ export default function StockPage() {
               <thead className="border-b border-dark-200 bg-dark-50 text-dark-600">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Boisson</th>
-                  <th className="px-4 py-3 font-semibold">Prix</th>
+                  <th className="px-4 py-3 font-semibold">Prix achat</th>
+                  <th className="px-4 py-3 font-semibold">Prix vente</th>
                   <th className="px-4 py-3 font-semibold">Stock</th>
                   <th className="px-4 py-3 font-semibold">Actions</th>
                 </tr>
@@ -321,7 +421,7 @@ export default function StockPage() {
               <tbody>
                 {beverages.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-dark-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-dark-500">
                       Aucune boisson. Créez-en une ou ajoutez des articles dans la catégorie Boissons via le menu.
                     </td>
                   </tr>
@@ -336,6 +436,9 @@ export default function StockPage() {
                           {bev.description && (
                             <p className="text-xs text-dark-500">{bev.description}</p>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-dark-700">
+                          {bev.purchasePrice != null ? `${Number(bev.purchasePrice).toFixed(2)} DA` : "—"}
                         </td>
                         <td className="px-4 py-3 text-dark-700">{Number(bev.price).toFixed(2)} DA</td>
                         <td className={`px-4 py-3 ${tracked ? qtyClass(stock) : "text-dark-400"}`}>
@@ -391,7 +494,7 @@ export default function StockPage() {
           onClose={() => setShowBevForm(false)}
           onSaved={async () => {
             setShowBevForm(false);
-            await loadBeverages();
+            await Promise.all([loadBeverages(), loadPurchases()]);
           }}
         />
       )}

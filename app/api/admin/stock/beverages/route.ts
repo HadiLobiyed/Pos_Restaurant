@@ -34,6 +34,7 @@ export async function GET() {
 const createSchema = z.object({
   name: z.string().min(1),
   price: z.coerce.number().positive(),
+  purchasePrice: z.coerce.number().min(0),
   description: z.string().optional(),
   quantity: z.coerce.number().int().min(0),
 });
@@ -53,16 +54,30 @@ export async function POST(req: Request) {
 
   try {
     const categoryId = await resolveBeverageCategoryId();
-    const item = await prisma.menuItem.create({
-      data: {
-        name: parsed.data.name.trim(),
-        description: parsed.data.description?.trim() || null,
-        price: parsed.data.price,
-        categoryId,
-        visible: true,
-        stock: parsed.data.quantity,
-      },
-      include: { category: true },
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.menuItem.create({
+        data: {
+          name: parsed.data.name.trim(),
+          description: parsed.data.description?.trim() || null,
+          price: parsed.data.price,
+          purchasePrice: parsed.data.purchasePrice,
+          categoryId,
+          visible: parsed.data.quantity > 0,
+          stock: parsed.data.quantity,
+        },
+        include: { category: true },
+      });
+      if (parsed.data.quantity > 0 && parsed.data.purchasePrice > 0) {
+        const { recordStockPurchase } = await import("@/lib/stockPurchase");
+        await recordStockPurchase(tx, {
+          type: "beverage",
+          itemId: created.id,
+          itemName: created.name,
+          quantity: parsed.data.quantity,
+          unitPrice: parsed.data.purchasePrice,
+        });
+      }
+      return created;
     });
     return NextResponse.json(item, { status: 201 });
   } catch (e) {

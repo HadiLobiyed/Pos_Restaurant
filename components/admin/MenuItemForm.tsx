@@ -14,6 +14,7 @@ type MenuItem = {
   name: string;
   description: string | null;
   price: { toString(): string };
+  purchasePrice?: { toString(): string } | null;
   image: string | null;
   categoryId: string;
   visible: boolean;
@@ -41,6 +42,7 @@ export function MenuItemForm({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
   const [image, setImage] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [categoryId, setCategoryId] = useState("");
@@ -55,6 +57,7 @@ export function MenuItemForm({
       setName(editingItem.name);
       setDescription(editingItem.description ?? "");
       setPrice(editingItem.price.toString());
+      setPurchasePrice(editingItem.purchasePrice?.toString() ?? "");
       setImage(editingItem.image ?? "");
       setCategoryId(editingItem.categoryId);
       setVisible(editingItem.visible);
@@ -109,7 +112,7 @@ export function MenuItemForm({
     setError("");
     setLoading(true);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       name,
       description: description || undefined,
       price: parseFloat(price),
@@ -119,6 +122,9 @@ export function MenuItemForm({
       stock: stock === "" ? null : (() => { const n = parseInt(stock, 10); return Number.isNaN(n) ? null : n; })(),
       barcode: barcode === "" ? null : barcode,
     };
+    if (lockCategory) {
+      payload.purchasePrice = parseFloat(purchasePrice);
+    }
     const url = editingItem ? `/api/menu/${editingItem.id}` : "/api/menu";
     const res = await fetch(url, {
       method: editingItem ? "PATCH" : "POST",
@@ -163,18 +169,47 @@ export function MenuItemForm({
               className="input-field"
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-dark-700">Price</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-              className="input-field"
-            />
-          </div>
+          {lockCategory ? (
+            <>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-dark-700">Prix d&apos;achat (DA)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  required
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-dark-700">Prix de vente (DA)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                  className="input-field"
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-dark-700">Price</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+                className="input-field"
+              />
+            </div>
+          )}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-dark-700">Image</label>
             <input

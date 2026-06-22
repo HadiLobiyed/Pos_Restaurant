@@ -58,16 +58,21 @@ export function MenuClient({
     return null;
   }, [mode, tableId, orderCode]);
 
+  const visibleItems = useMemo(
+    () => items.filter((i) => i.stock == null || i.stock > 0),
+    [items]
+  );
+
   const categories = useMemo(() => {
     const map = new Map<string, string>();
-    items.forEach((i) => map.set(i.category.id, i.category.name));
+    visibleItems.forEach((i) => map.set(i.category.id, i.category.name));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [items]);
+  }, [visibleItems]);
 
   const filteredItems = useMemo(() => {
-    if (!categoryFilter) return items;
-    return items.filter((i) => i.categoryId === categoryFilter);
-  }, [items, categoryFilter]);
+    if (!categoryFilter) return visibleItems;
+    return visibleItems.filter((i) => i.categoryId === categoryFilter);
+  }, [visibleItems, categoryFilter]);
 
   const addToCart = (item: Item, quantity = 1) => {
     if (item.stock != null && item.stock <= 0) return;

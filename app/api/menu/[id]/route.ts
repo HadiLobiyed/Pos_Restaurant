@@ -8,6 +8,7 @@ const updateSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
   price: z.number().positive().optional(),
+  purchasePrice: z.number().min(0).nullable().optional(),
   image: z.string().optional().nullable(),
   categoryId: z.string().optional(),
   visible: z.boolean().optional(),
@@ -27,6 +28,14 @@ export async function PATCH(
   const parsed = updateSchema.safeParse({
     ...body,
     price: body.price != null ? (typeof body.price === "string" ? parseFloat(body.price) : body.price) : undefined,
+    purchasePrice:
+      body.purchasePrice === undefined
+        ? undefined
+        : body.purchasePrice === "" || body.purchasePrice === null
+          ? null
+          : typeof body.purchasePrice === "string"
+            ? parseFloat(body.purchasePrice)
+            : body.purchasePrice,
     stock: body.stock === "" || body.stock === undefined ? undefined : (typeof body.stock === "string" ? parseInt(body.stock, 10) : body.stock),
     barcode: body.barcode === undefined ? undefined : (body.barcode === "" ? null : body.barcode),
     supplements: body.supplements ? body.supplements.map((s: any) => ({ ...s, price: parseFloat(s.price) })) : undefined,
@@ -36,10 +45,16 @@ export async function PATCH(
   if (parsed.data.name != null) data.name = parsed.data.name;
   if (parsed.data.description !== undefined) data.description = parsed.data.description;
   if (parsed.data.price != null) data.price = parsed.data.price;
+  if (parsed.data.purchasePrice !== undefined) data.purchasePrice = parsed.data.purchasePrice;
   if (parsed.data.image !== undefined) data.image = parsed.data.image;
   if (parsed.data.categoryId != null) data.categoryId = parsed.data.categoryId;
   if (parsed.data.visible !== undefined) data.visible = parsed.data.visible;
-  if (parsed.data.stock !== undefined) data.stock = parsed.data.stock;
+  if (parsed.data.stock !== undefined) {
+    data.stock = parsed.data.stock;
+    if (parsed.data.visible === undefined && parsed.data.stock != null) {
+      data.visible = parsed.data.stock > 0;
+    }
+  }
   if (parsed.data.barcode !== undefined) data.barcode = parsed.data.barcode;
   if (parsed.data.supplements !== undefined) data.supplements = { deleteMany: {}, create: parsed.data.supplements };
 

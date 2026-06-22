@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { isBeverageCategory } from "@/lib/beverages";
+import { applyStockUpdate } from "@/lib/menuItemStock";
+import { recordStockPurchase } from "@/lib/stockPurchase";
 
 const patchSchema = z.object({
   delta: z.coerce.number().int().optional(),
@@ -39,11 +41,24 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         ? parsed.data.quantity
         : Math.max(0, current + (parsed.data.delta ?? 0));
 
-    const updated = await prisma.menuItem.update({
-      where: { id: params.id },
-      data: { stock: nextQty },
-      include: { category: true },
+    const addedQty = nextQty - current;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (addedQty > 0) {
+        const unitPrice = Number(item.purchasePrice ?? 0);
+        if (unitPrice > 0) {
+          await recordStockPurchase(tx, {
+            type: "beverage",
+            itemId: item.id,
+            itemName: item.name,
+            quantity: addedQty,
+            unitPrice,
+          });
+        }
+      }
+      return applyStockUpdate(tx, params.id, nextQty);
     });
+
     return NextResponse.json(updated);
   } catch (e) {
     console.error("PATCH /api/admin/stock/beverages/[id]", e);

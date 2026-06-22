@@ -63,19 +63,20 @@ model Category {
 }
 
 model MenuItem {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
-  image       String?
-  categoryId  String
-  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  visible     Boolean   @default(true)
-  stock       Int?      // null = pas de suivi, sinon quantité restante (ex: boissons)
-  barcode     String?   // code-barres
-  supplements Supplement[]
-  orderItems  OrderItem[]
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  purchasePrice Decimal?  @db.Decimal(10, 2) // prix d'achat (boissons — calcul bénéfice)
+  image         String?
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  visible       Boolean   @default(true)
+  stock         Int?      // null = pas de suivi, sinon quantité restante (ex: boissons)
+  barcode       String?   // code-barres
+  supplements   Supplement[]
+  orderItems    OrderItem[]
+  createdAt     DateTime  @default(now())
 }
 
 model Supplement {
@@ -156,7 +157,20 @@ model StockIngredient {
   id        String   @id @default(cuid())
   name      String
   quantity  Int      @default(0)
-  unit      String?  // ex. kg, L, pièce
+  unit      String?  // g, kg, L, ML, unité
+  unitPrice Decimal? @db.Decimal(10, 2) // prix d'achat par unité
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Achats stock (ingrédients ou boissons) — suivi journalier
+model StockPurchase {
+  id        String   @id @default(cuid())
+  type      String   // "ingredient" | "beverage"
+  itemId    String
+  itemName  String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2)
+  totalCost Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
 }

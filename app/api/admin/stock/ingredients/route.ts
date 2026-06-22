@@ -8,6 +8,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   quantity: z.coerce.number().int().min(0).optional(),
   unit: z.string().optional(),
+  unitPrice: z.coerce.number().min(0),
 });
 
 export async function GET() {
@@ -39,12 +40,27 @@ export async function POST(req: Request) {
   }
 
   try {
-    const row = await prisma.stockIngredient.create({
-      data: {
-        name: parsed.data.name.trim(),
-        quantity: parsed.data.quantity ?? 0,
-        unit: parsed.data.unit?.trim() || null,
-      },
+    const qty = parsed.data.quantity ?? 0;
+    const row = await prisma.$transaction(async (tx) => {
+      const created = await tx.stockIngredient.create({
+        data: {
+          name: parsed.data.name.trim(),
+          quantity: qty,
+          unit: parsed.data.unit?.trim() || null,
+          unitPrice: parsed.data.unitPrice,
+        },
+      });
+      if (qty > 0 && parsed.data.unitPrice > 0) {
+        const { recordStockPurchase } = await import("@/lib/stockPurchase");
+        await recordStockPurchase(tx, {
+          type: "ingredient",
+          itemId: created.id,
+          itemName: created.name,
+          quantity: qty,
+          unitPrice: parsed.data.unitPrice,
+        });
+      }
+      return created;
     });
     return NextResponse.json(row, { status: 201 });
   } catch (e) {

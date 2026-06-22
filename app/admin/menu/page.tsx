@@ -127,6 +127,22 @@ export default function MenuPage() {
     fetchCategories();
   }
 
+  async function deleteCategory(id: string, name: string, itemCount: number) {
+    const msg =
+      itemCount > 0
+        ? `Supprimer la catégorie « ${name} » et ses ${itemCount} article(s) ?`
+        : `Supprimer la catégorie « ${name} » ?`;
+    if (!confirm(msg)) return;
+    const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Suppression impossible.");
+      return;
+    }
+    if (categoryFilter === id) setCategoryFilter("");
+    if (categorySupplementsId === id) setCategorySupplementsId("");
+    await Promise.all([fetchCategories(), fetchItems()]);
+  }
+
   function onItemCreated() {
     setShowItemForm(false);
     setEditingItem(null);
@@ -160,12 +176,20 @@ export default function MenuPage() {
           {categories.map((c) => (
             <span
               key={c.id}
-              className="inline-flex items-center rounded-xl border border-dark-200 bg-white px-4 py-2 text-sm font-medium text-dark-800 shadow-card"
+              className="inline-flex items-center gap-2 rounded-xl border border-dark-200 bg-white px-4 py-2 text-sm font-medium text-dark-800 shadow-card"
             >
               {c.name}
               {c._count != null && (
-                <span className="ml-1.5 text-dark-500">({c._count.menuItems})</span>
+                <span className="text-dark-500">({c._count.menuItems})</span>
               )}
+              <button
+                type="button"
+                onClick={() => deleteCategory(c.id, c.name, c._count?.menuItems ?? 0)}
+                className="ml-1 text-xs font-semibold text-red-600 hover:underline"
+                title="Supprimer la catégorie"
+              >
+                Suppr.
+              </button>
             </span>
           ))}
         </div>
