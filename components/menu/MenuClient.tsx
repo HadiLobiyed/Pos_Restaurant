@@ -25,6 +25,7 @@ type Item = {
   image: string | null;
   categoryId: string;
   category: { id: string; name: string };
+  stock?: number | null;
   supplements?: Array<{ id: string; name: string; price: { toString(): string } }>;
 };
 
@@ -69,6 +70,7 @@ export function MenuClient({
   }, [items, categoryFilter]);
 
   const addToCart = (item: Item, quantity = 1) => {
+    if (item.stock != null && item.stock <= 0) return;
     setCart((prev) => {
       const existing = prev.find((c) => c.menuItemId === item.id);
       if (existing) {

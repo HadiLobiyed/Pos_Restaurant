@@ -16,6 +16,7 @@ const links: Array<{
   { href: "/admin/pos", label: "POS", icon: "🖥️" },
   { href: "/admin/sales", label: "Ventes", icon: "💰" },
   { href: "/admin/menu", label: "Menu", icon: "📋" },
+  { href: "/admin/stock", label: "Stock", icon: "📦" },
   { href: "/admin/tables", label: "Tables", icon: "🪑" },
   { href: "/admin/reservations", label: "Réservations", icon: "📅", badge: "pendingReservations" },
   { href: "/admin/kitchen", label: "Cuisine", icon: "👨‍🍳" },

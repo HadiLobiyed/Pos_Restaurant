@@ -150,3 +150,13 @@ model Payment {
   status    PaymentStatus @default(UNPAID)
   createdAt DateTime      @default(now())
 }
+
+/// Ingrédients (hors menu) — suivi de quantité en stock cuisine
+model StockIngredient {
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Int      @default(0)
+  unit      String?  // ex. kg, L, pièce
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

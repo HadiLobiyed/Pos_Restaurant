@@ -41,6 +41,7 @@ function MenuContent() {
     image: string | null;
     categoryId: string;
     category: { id: string; name: string };
+    stock: number | null;
   }>>([]);
   const [loading, setLoading] = useState(true);
 

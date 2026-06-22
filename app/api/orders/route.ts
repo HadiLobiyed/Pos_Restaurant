@@ -10,6 +10,7 @@ import {
   mergeWeekSchedule,
   validateWeekSchedule,
 } from "@/lib/openingHours";
+import { validateMenuItemsStock } from "@/lib/stockValidation";
 import {
   appendItemsToOrder,
   findActiveUnpaidOrderByCode,
@@ -96,6 +97,11 @@ export async function POST(req: Request) {
     }
     if (items.length === 0)
       return NextResponse.json({ error: "At least one item required" }, { status: 400 });
+
+    const stockCheck = await validateMenuItemsStock(prisma, items);
+    if (!stockCheck.ok) {
+      return NextResponse.json({ error: stockCheck.message }, { status: 409 });
+    }
 
     if (!session) {
       try {

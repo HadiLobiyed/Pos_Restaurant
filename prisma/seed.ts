@@ -9,6 +9,7 @@ async function main() {
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.stockIngredient.deleteMany();
   await prisma.menuItem.deleteMany();
   await prisma.category.deleteMany();
   await prisma.table.deleteMany();
@@ -69,6 +70,16 @@ async function main() {
     const item = await prisma.menuItem.create({ data });
     items.push(item);
   }
+
+  console.log("Creating stock ingredients...");
+  await prisma.stockIngredient.createMany({
+    data: [
+      { name: "Farine", quantity: 25, unit: "kg" },
+      { name: "Mozzarella", quantity: 12, unit: "kg" },
+      { name: "Tomates", quantity: 8, unit: "kg" },
+      { name: "Huile d'olive", quantity: 6, unit: "L" },
+    ],
+  });
 
   console.log("Creating tables...");
   const tables = [];
