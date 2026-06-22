@@ -26,11 +26,17 @@ export function MenuItemForm({
   editingItem,
   onClose,
   onSaved,
+  defaultCategoryId,
+  lockCategory = false,
+  createTitle = "Nouvel article",
 }: {
   categories: Category[];
   editingItem: MenuItem | null;
   onClose: () => void;
   onSaved: () => void;
+  defaultCategoryId?: string;
+  lockCategory?: boolean;
+  createTitle?: string;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -55,11 +61,11 @@ export function MenuItemForm({
       setStock(editingItem.stock != null ? String(editingItem.stock) : "");
       setBarcode(editingItem.barcode ?? "");
     } else if (categories.length) {
-      setCategoryId(categories[0].id);
+      setCategoryId(defaultCategoryId ?? categories[0].id);
       setStock("");
       setBarcode("");
     }
-  }, [editingItem, categories]);
+  }, [editingItem, categories, defaultCategoryId]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -135,7 +141,7 @@ export function MenuItemForm({
     >
       <div className="max-h-[min(90dvh,900px)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-white p-6 shadow-elevated">
         <h3 className="mb-4 text-lg font-semibold text-dark-900">
-          {editingItem ? "Modifier l'article" : "Nouvel article"}
+          {editingItem ? "Modifier l'article" : createTitle}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
@@ -226,21 +232,23 @@ export function MenuItemForm({
             />
             <p className="text-xs text-dark-500 mt-0.5">Pour les boissons : quantité restante. Vide = pas de suivi.</p>
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-dark-700">Category</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              required
-              className="input-field"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!lockCategory && (
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-dark-700">Category</label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                required
+                className="input-field"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <input

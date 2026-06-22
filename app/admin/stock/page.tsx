@@ -1,6 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MenuItemForm } from "@/components/admin/MenuItemForm";
+import { isBeverageCategory } from "@/lib/beverages";
+
+type Category = { id: string; name: string };
 
 type StockIngredient = {
   id: string;
@@ -33,15 +37,23 @@ export default function StockPage() {
 
   const [ingredients, setIngredients] = useState<StockIngredient[]>([]);
   const [beverages, setBeverages] = useState<BeverageItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showBevForm, setShowBevForm] = useState(false);
 
   const [newIngName, setNewIngName] = useState("");
   const [newIngQty, setNewIngQty] = useState("0");
   const [newIngUnit, setNewIngUnit] = useState("");
 
-  const [newBevName, setNewBevName] = useState("");
-  const [newBevPrice, setNewBevPrice] = useState("");
-  const [newBevQty, setNewBevQty] = useState("0");
-  const [newBevDesc, setNewBevDesc] = useState("");
+  const beverageCategoryId = useMemo(
+    () => categories.find((c) => isBeverageCategory(c.name))?.id,
+    [categories]
+  );
+
+  const loadCategories = useCallback(async () => {
+    const res = await fetch("/api/categories");
+    if (!res.ok) throw new Error("Chargement catégories impossible.");
+    setCategories(await res.json());
+  }, []);
 
   const loadIngredients = useCallback(async () => {
     const res = await fetch("/api/admin/stock/ingredients");
@@ -62,13 +74,13 @@ export default function StockPage() {
     setError("");
     setLoading(true);
     try {
-      await Promise.all([loadIngredients(), loadBeverages()]);
+      await Promise.all([loadIngredients(), loadBeverages(), loadCategories()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur.");
     } finally {
       setLoading(false);
     }
-  }, [loadIngredients, loadBeverages]);
+  }, [loadIngredients, loadBeverages, loadCategories]);
 
   useEffect(() => {
     reload();
@@ -117,32 +129,6 @@ export default function StockPage() {
     if (!confirm("Supprimer cet ingrédient ?")) return;
     await fetch(`/api/admin/stock/ingredients/${id}`, { method: "DELETE" });
     await loadIngredients();
-  }
-
-  async function createBeverage(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newBevName.trim() || !newBevPrice) return;
-    setError("");
-    const res = await fetch("/api/admin/stock/beverages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: newBevName.trim(),
-        price: parseFloat(newBevPrice),
-        quantity: parseInt(newBevQty, 10) || 0,
-        description: newBevDesc.trim() || undefined,
-      }),
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      setError(typeof d?.error === "string" ? d.error : "Création impossible.");
-      return;
-    }
-    setNewBevName("");
-    setNewBevPrice("");
-    setNewBevQty("0");
-    setNewBevDesc("");
-    await loadBeverages();
   }
 
   async function adjustBeverage(id: string, delta: number) {
@@ -306,58 +292,21 @@ export default function StockPage() {
 
       {tab === "beverages" && (
         <div className="space-y-6">
-          <form
-            onSubmit={createBeverage}
-            className="grid gap-3 rounded-2xl border border-dark-200 bg-white p-5 shadow-card sm:grid-cols-2 lg:grid-cols-5"
-          >
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-dark-600">Nouvelle boisson</label>
-              <input
-                value={newBevName}
-                onChange={(e) => setNewBevName(e.target.value)}
-                placeholder="Nom"
-                className="input-field"
-              />
+              <p className="font-semibold text-dark-900">Boissons du menu</p>
+              <p className="mt-1 text-xs text-dark-500">
+                La boisson est ajoutée au menu (catégorie Boissons) et suivie ici.
+              </p>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-dark-600">Prix (DA)</label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={newBevPrice}
-                onChange={(e) => setNewBevPrice(e.target.value)}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-dark-600">Stock initial</label>
-              <input
-                type="number"
-                min={0}
-                value={newBevQty}
-                onChange={(e) => setNewBevQty(e.target.value)}
-                className="input-field"
-              />
-            </div>
-            <div className="sm:col-span-2 lg:col-span-1">
-              <label className="mb-1 block text-xs font-semibold text-dark-600">Description</label>
-              <input
-                value={newBevDesc}
-                onChange={(e) => setNewBevDesc(e.target.value)}
-                placeholder="Optionnel"
-                className="input-field"
-              />
-            </div>
-            <div className="flex items-end sm:col-span-2 lg:col-span-1">
-              <button type="submit" className="btn-primary w-full">
-                Créer + menu
-              </button>
-            </div>
-            <p className="text-xs text-dark-500 sm:col-span-2 lg:col-span-5">
-              La boisson est ajoutée au menu (catégorie Boissons) et suivie ici.
-            </p>
-          </form>
+            <button
+              type="button"
+              onClick={() => setShowBevForm(true)}
+              className="btn-primary"
+            >
+              + Ajouter une boisson
+            </button>
+          </div>
 
           <div className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-card">
             <table className="w-full text-left text-sm">
@@ -430,6 +379,21 @@ export default function StockPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {showBevForm && (
+        <MenuItemForm
+          categories={categories}
+          editingItem={null}
+          defaultCategoryId={beverageCategoryId}
+          lockCategory
+          createTitle="Nouvelle boisson"
+          onClose={() => setShowBevForm(false)}
+          onSaved={async () => {
+            setShowBevForm(false);
+            await loadBeverages();
+          }}
+        />
       )}
     </div>
   );
