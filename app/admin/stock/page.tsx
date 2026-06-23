@@ -47,7 +47,7 @@ function qtyClass(qty: number): string {
   return "text-dark-800 font-semibold";
 }
 
-export function StockPageClient() {
+function StockPageClient() {
   const searchParams = useSearchParams();
   const selectedDate = searchParams.get("date") ?? format(new Date(), "yyyy-MM-dd");
   const selectedDateLabel = useMemo(() => {
