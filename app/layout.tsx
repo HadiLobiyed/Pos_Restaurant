@@ -3,6 +3,8 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { GlobalFooter } from "@/components/GlobalFooter";
+import { BrandingHead } from "@/components/BrandingHead";
+import { getRestaurantBranding } from "@/lib/restaurantSettings";
 
 const font = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -10,18 +12,33 @@ const font = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "Restaurant POS",
-  description: "Restaurant Point of Sale & QR Menu Ordering",
-};
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { restaurantName, logoUrl, logoUpdatedAt } = await getRestaurantBranding();
+  const iconHref = logoUrl
+    ? `${logoUrl}${logoUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(logoUpdatedAt ?? "1")}`
+    : "/api/branding/favicon";
+
+  return {
+    title: restaurantName,
+    description: "Restaurant Point of Sale & QR Menu Ordering",
+    icons: {
+      icon: [{ url: iconHref }],
+      shortcut: [{ url: iconHref }],
+      apple: logoUrl ? [{ url: iconHref }] : undefined,
+    },
+  };
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body className={`${font.variable} font-sans antialiased`}>
         <Providers>
+          <BrandingHead />
           <div className="flex min-h-screen flex-col">
             <div className="flex-1">{children}</div>
             <GlobalFooter />

@@ -111,3 +111,32 @@ export async function uploadFileToMenuBucket(
 
   throw new Error(formatBucketNotFound(lastError));
 }
+
+/** Logo restaurant — chemin fixe branding/logo.{ext} (upsert) */
+export async function uploadBufferToBrandingBucket(
+  supabase: SupabaseClient,
+  buffer: Buffer,
+  ext: string,
+  mime: string
+): Promise<{ publicUrl: string; storagePath: string }> {
+  const objectPath = `branding/logo.${ext}`;
+  const buckets = getMenuImageBucketCandidates();
+  let lastError = "Upload impossible";
+
+  for (const bucket of buckets) {
+    const result = await tryUpload(supabase, bucket, objectPath, buffer, mime);
+    if (result.ok) return { publicUrl: result.publicUrl, storagePath: `${bucket}/${objectPath}` };
+
+    lastError = `[${bucket}] ${result.message}`;
+    const msg = result.message.toLowerCase();
+    if (msg.includes("bucket not found") || (msg.includes("invalid") && msg.includes("bucket"))) {
+      continue;
+    }
+    if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
+      throw new Error(formatRlsError(lastError));
+    }
+    throw new Error(lastError);
+  }
+
+  throw new Error(formatBucketNotFound(lastError));
+}

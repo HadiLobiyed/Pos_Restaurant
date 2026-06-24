@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -28,6 +29,8 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const [pendingReservations, setPendingReservations] = useState<number | null>(null);
   const [restaurantName, setRestaurantName] = useState("Restaurant POS");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUpdatedAt, setLogoUpdatedAt] = useState<string | null>(null);
   const { data: session } = useSession();
   const role = session?.user?.role ?? "STAFF";
   const isAdmin = role === "ADMIN";
@@ -52,9 +55,14 @@ export function AdminSidebar() {
         if (typeof d.restaurantName === "string" && d.restaurantName.trim()) {
           setRestaurantName(d.restaurantName.trim());
         }
+        setLogoUrl(typeof d.logoUrl === "string" && d.logoUrl.trim() ? d.logoUrl.trim() : null);
+        setLogoUpdatedAt(typeof d.logoUpdatedAt === "string" ? d.logoUpdatedAt : null);
       })
       .catch(() => {});
   }, []);
+
+  const logoPreview =
+    logoUrl && `${logoUrl}${logoUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(logoUpdatedAt ?? "1")}`;
 
   return (
     <aside className="flex w-64 flex-col bg-dark-900 text-white">
@@ -63,9 +71,15 @@ export function AdminSidebar() {
           href="/admin/dashboard"
           className="flex items-center gap-2 text-xl font-bold"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-500 text-lg">
-            {restaurantName.charAt(0).toUpperCase()}
-          </span>
+          {logoPreview ? (
+            <span className="relative flex h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-white">
+              <Image src={logoPreview} alt="" width={36} height={36} className="h-full w-full object-contain" unoptimized />
+            </span>
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-500 text-lg">
+              {restaurantName.charAt(0).toUpperCase()}
+            </span>
+          )}
           <span className="truncate">{restaurantName}</span>
         </Link>
       </div>

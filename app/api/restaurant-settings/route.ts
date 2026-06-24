@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getRestaurantName } from "@/lib/restaurantSettings";
+import { getRestaurantBranding } from "@/lib/restaurantSettings";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const restaurantName = await getRestaurantName();
-  return NextResponse.json({ restaurantName });
+  const branding = await getRestaurantBranding();
+  return NextResponse.json(branding);
 }

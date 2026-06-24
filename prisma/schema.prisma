@@ -56,6 +56,15 @@ model RestaurantSettings {
   updatedAt      DateTime @updatedAt
 }
 
+/// Logo du restaurant (favicon + barre admin) — ligne unique id = "default", image sur Supabase Storage
+model RestaurantLogo {
+  id          String   @id @default("default")
+  imageUrl    String?
+  storagePath String?
+  mimeType    String?
+  updatedAt   DateTime @updatedAt
+}
+
 /// Totaux journaliers des ventes (conservés après archivage des détails > 7 jours)
 model DailySalesSummary {
   id             String   @id @default(cuid())
