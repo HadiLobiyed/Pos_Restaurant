@@ -23,7 +23,7 @@ const service =
 const publishable =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const bucket = process.env.SUPABASE_STORAGE_BUCKET || "PRODUITS";
+const bucket = process.env.SUPABASE_STORAGE_BUCKET || "products";
 
 console.log("URL:", url ? "set" : "MISSING");
 console.log("Service role:", service ? "set" : "MISSING");
