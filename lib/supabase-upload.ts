@@ -4,8 +4,13 @@ import {
   getMenuImageBucketCandidates,
   getSupabaseProjectRef,
   getSupabaseProjectUrl,
+  DEFAULT_BUCKET,
 } from "./supabase-storage";
 import { randomId } from "./random-id";
+import {
+  ensurePublicStorageBucket,
+  isBucketNotFoundError,
+} from "./storage-bucket";
 
 type UploadBody = Buffer | File | Blob;
 
@@ -35,23 +40,38 @@ function formatBucketNotFound(lastError: string): string {
   const bucket = getMenuImageBucket();
 
   return (
-    `${lastError} — Bucket « ${bucket} » absent sur le projet Supabase` +
-    (ref ? ` ${ref}` : "") +
-    `. Corrigez NEXT_PUBLIC_SUPABASE_URL sur Vercel : ouvrez une image du site, copiez le host ` +
-    `(https://XXXX.supabase.co) et utilisez les clés API de ce même projet (Settings → API). ` +
-    `DATABASE_URL et Supabase Storage doivent être le même projet.`
+    `${lastError} — Aucun bucket Storage utilisable (config : « ${bucket} »). ` +
+    (ref ? `Projet Supabase : ${ref}. ` : "") +
+    `Créez un bucket PUBLIC nommé « products » : Supabase → Storage. ` +
+    `Puis sur Vercel : SUPABASE_STORAGE_BUCKET=products (comme dans l’URL .../public/products/...). ` +
+    `(Settings → API → service_role) pour création auto.`
   );
+}
+
+async function prepareBuckets(
+  supabase: SupabaseClient,
+  adminSupabase: SupabaseClient | null
+): Promise<string[]> {
+  const candidates = getMenuImageBucketCandidates();
+  if (!adminSupabase) return candidates;
+
+  const toEnsure = [getMenuImageBucket(), DEFAULT_BUCKET, "produits"];
+  for (const name of toEnsure) {
+    await ensurePublicStorageBucket(adminSupabase, name).catch(() => {});
+  }
+  return candidates;
 }
 
 export async function uploadBufferToMenuBucket(
   supabase: SupabaseClient,
   buffer: Buffer,
   ext: string,
-  mime: string
+  mime: string,
+  adminSupabase?: SupabaseClient | null
 ): Promise<string> {
   const id = randomId();
   const pathVariants = [`${id}.${ext}`, `menu/${id}.${ext}`];
-  const buckets = getMenuImageBucketCandidates();
+  const buckets = await prepareBuckets(supabase, adminSupabase ?? null);
 
   let lastError = "Upload impossible";
 
@@ -62,9 +82,7 @@ export async function uploadBufferToMenuBucket(
 
       lastError = `[${bucket}] ${result.message}`;
       const msg = result.message.toLowerCase();
-      if (msg.includes("bucket not found") || (msg.includes("invalid") && msg.includes("bucket"))) {
-        continue;
-      }
+      if (isBucketNotFoundError(msg)) continue;
       if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
         throw new Error(formatRlsError(lastError));
       }
@@ -86,11 +104,12 @@ export async function uploadFileToMenuBucket(
   supabase: SupabaseClient,
   file: File,
   ext: string,
-  mime: string
+  mime: string,
+  adminSupabase?: SupabaseClient | null
 ): Promise<string> {
   const id = randomId();
   const pathVariants = [`${id}.${ext}`, `menu/${id}.${ext}`];
-  const buckets = getMenuImageBucketCandidates();
+  const buckets = await prepareBuckets(supabase, adminSupabase ?? null);
 
   let lastError = "Upload impossible";
 
@@ -101,7 +120,7 @@ export async function uploadFileToMenuBucket(
 
       lastError = `[${bucket}] ${result.message}`;
       const msg = result.message.toLowerCase();
-      if (msg.includes("bucket not found")) continue;
+      if (isBucketNotFoundError(msg)) continue;
       if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
         throw new Error(formatRlsError(lastError));
       }
@@ -117,10 +136,11 @@ export async function uploadBufferToBrandingBucket(
   supabase: SupabaseClient,
   buffer: Buffer,
   ext: string,
-  mime: string
+  mime: string,
+  adminSupabase?: SupabaseClient | null
 ): Promise<{ publicUrl: string; storagePath: string }> {
   const objectPath = `branding/logo.${ext}`;
-  const buckets = getMenuImageBucketCandidates();
+  const buckets = await prepareBuckets(supabase, adminSupabase ?? null);
   let lastError = "Upload impossible";
 
   for (const bucket of buckets) {
@@ -129,9 +149,7 @@ export async function uploadBufferToBrandingBucket(
 
     lastError = `[${bucket}] ${result.message}`;
     const msg = result.message.toLowerCase();
-    if (msg.includes("bucket not found") || (msg.includes("invalid") && msg.includes("bucket"))) {
-      continue;
-    }
+    if (isBucketNotFoundError(msg)) continue;
     if (msg.includes("row-level security") || msg.includes("policy") || msg.includes("403")) {
       throw new Error(formatRlsError(lastError));
     }

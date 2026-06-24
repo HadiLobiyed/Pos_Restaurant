@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api-auth";
-import { getMenuImageBucketCandidates, getSupabaseStorageClient } from "@/lib/supabase-admin";
+import { getMenuImageBucketCandidates, getSupabaseStorageClient, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { uploadBufferToMenuBucket } from "@/lib/supabase-upload";
 import {
   extFromMenuImageMime,
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const testUrl = await uploadBufferToMenuBucket(supabase, buf, "png", "image/png");
+    const testUrl = await uploadBufferToMenuBucket(supabase, buf, "png", "image/png", getSupabaseAdmin());
     return NextResponse.json({ ok: true, checks, testUploadUrl: testUrl });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erreur test";
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     let publicPath: string;
     if (supabase) {
-      publicPath = await uploadBufferToMenuBucket(supabase, buffer, ext, mime);
+      publicPath = await uploadBufferToMenuBucket(supabase, buffer, ext, mime, getSupabaseAdmin());
     } else if (onVercel) {
       return NextResponse.json(
         {

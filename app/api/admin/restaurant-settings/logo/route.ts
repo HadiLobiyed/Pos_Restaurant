@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getSupabaseStorageClient } from "@/lib/supabase-admin";
+import { getSupabaseStorageClient, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { uploadBufferToBrandingBucket } from "@/lib/supabase-upload";
 import {
   extFromMenuImageMime,
@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
 
     let uploaded: { publicUrl: string; storagePath: string };
     if (supabase) {
-      uploaded = await uploadBufferToBrandingBucket(supabase, buffer, ext, mime);
+      const admin = getSupabaseAdmin();
+      uploaded = await uploadBufferToBrandingBucket(supabase, buffer, ext, mime, admin);
     } else if (onVercel) {
       return NextResponse.json(
         {

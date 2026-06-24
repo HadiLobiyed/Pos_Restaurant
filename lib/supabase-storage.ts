@@ -1,5 +1,7 @@
-/** Nom réel du bucket (voir URLs /storage/.../public/products/...) */
-const DEFAULT_BUCKET = "products";
+/** Nom réel du bucket (URL : .../storage/v1/object/public/products/...) */
+export const DEFAULT_BUCKET = "products";
+
+const BUCKET_ALIASES = ["products", "produits"] as const;
 
 /** Extrait https://REF.supabase.co depuis DATABASE_URL / POSTGRES_URL */
 export function deriveSupabaseUrlFromDatabase(): string | null {
@@ -70,10 +72,25 @@ export function getMenuImageBucket(): string {
 
 export function getMenuImageBucketCandidates(): string[] {
   const primary = getMenuImageBucket();
-  const variants = new Set<string>([primary]);
-  if (primary.toLowerCase() !== primary) variants.add(primary.toLowerCase());
-  if (primary.toUpperCase() !== primary) variants.add(primary.toUpperCase());
-  return Array.from(variants);
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  const add = (name: string) => {
+    const n = name.trim();
+    if (!n || seen.has(n)) return;
+    seen.add(n);
+    ordered.push(n);
+  };
+
+  add(primary);
+  add(primary.toLowerCase());
+  add(DEFAULT_BUCKET);
+  for (const alias of BUCKET_ALIASES) {
+    add(alias);
+    add(alias.toLowerCase());
+  }
+
+  return ordered;
 }
 
 export function isSupabaseStorageConfigured(): boolean {
