@@ -50,6 +50,7 @@ export default function PosPage() {
   const [customerAddress, setCustomerAddress] = useState("");
   /** Panier figé après envoi (ticket / impression avec code + client alors que le panier est vidé) */
   const [lastTicketSnapshot, setLastTicketSnapshot] = useState<PosCartItem[] | null>(null);
+  const [restaurantName, setRestaurantName] = useState("Restaurant POS");
 
   const ticketCart = cart.length > 0 ? cart : lastTicketSnapshot ?? [];
 
@@ -85,6 +86,14 @@ export default function PosPage() {
         })
         .then(setTables)
         .catch(() => setTables([])),
+      fetch("/api/restaurant-settings")
+        .then((r) => r.json())
+        .then((d) => {
+          if (typeof d.restaurantName === "string" && d.restaurantName.trim()) {
+            setRestaurantName(d.restaurantName.trim());
+          }
+        })
+        .catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -249,7 +258,10 @@ export default function PosPage() {
   return (
     <div className="flex h-screen flex-col bg-dark-100">
       <header className="flex flex-shrink-0 items-center justify-between border-b border-dark-200 bg-white px-6 py-4 shadow-card">
-        <h1 className="text-xl font-bold text-dark-900">Point de vente</h1>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-dark-500">{restaurantName}</p>
+          <h1 className="text-xl font-bold text-dark-900">Point de vente</h1>
+        </div>
       </header>
       <div className="flex min-h-0 flex-1">
         <div className="flex-1 overflow-auto p-6">
@@ -283,6 +295,7 @@ export default function PosPage() {
             onReset={resetOrder}
             onAfterOrderCreated={handleAfterOrderCreated}
             loadedOrderId={loadedOrderId}
+            restaurantName={restaurantName}
           />
         </div>
       </div>

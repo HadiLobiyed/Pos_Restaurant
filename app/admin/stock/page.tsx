@@ -73,6 +73,8 @@ function StockPageClient() {
 
   const [purchases, setPurchases] = useState<StockPurchase[]>([]);
   const [purchaseTotals, setPurchaseTotals] = useState({ totalProducts: 0, totalSpent: 0 });
+  const [purchasesArchived, setPurchasesArchived] = useState(false);
+  const [purchaseSummary, setPurchaseSummary] = useState<{ purchaseCount: number } | null>(null);
 
   const beverageCategoryId = useMemo(
     () => categories.find((c) => isBeverageCategory(c.name))?.id,
@@ -109,6 +111,8 @@ function StockPageClient() {
       totalProducts: data.totalProducts ?? 0,
       totalSpent: data.totalSpent ?? 0,
     });
+    setPurchasesArchived(data.archived === true);
+    setPurchaseSummary(data.summary ?? null);
   }, [selectedDate]);
 
   const reload = useCallback(async () => {
@@ -213,6 +217,11 @@ function StockPageClient() {
       <div className="mb-6 rounded-2xl border border-dark-200 bg-white p-5 shadow-card">
         <h2 className="mb-4 text-sm font-semibold text-dark-800">Historique des achats</h2>
         <StockPurchaseFilters selectedDate={selectedDate} />
+        {purchasesArchived && (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Données archivées — seul le total journalier est conservé au-delà de 7 jours.
+          </p>
+        )}
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
@@ -250,7 +259,16 @@ function StockPageClient() {
             </tr>
           </thead>
           <tbody>
-            {purchases.length === 0 ? (
+            {purchasesArchived && purchaseSummary ? (
+              <tr className="bg-dark-50/30">
+                <td className="px-4 py-2 text-dark-500">—</td>
+                <td className="px-4 py-2 font-medium text-dark-900">Total du jour</td>
+                <td className="px-4 py-2 text-dark-600">—</td>
+                <td className="px-4 py-2">{purchaseTotals.totalProducts}</td>
+                <td className="px-4 py-2">—</td>
+                <td className="px-4 py-2 font-semibold">{purchaseTotals.totalSpent.toFixed(2)} DA</td>
+              </tr>
+            ) : purchases.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-dark-500">
                   Aucun achat pour cette date.

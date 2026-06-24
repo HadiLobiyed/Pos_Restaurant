@@ -4,7 +4,6 @@ import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { PosCartItem } from "@/app/admin/pos/page";
 
-const RESTAURANT_NAME = "Restaurant POS";
 const RESTAURANT_PHONE = "";
 
 type PosTicketProps = {
@@ -18,6 +17,7 @@ type PosTicketProps = {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  restaurantName?: string;
   onClose: () => void;
   onPrint: () => void;
 };
@@ -43,6 +43,7 @@ export function PosTicket({
   customerName,
   customerPhone,
   customerAddress,
+  restaurantName = "Restaurant POS",
   onClose,
   onPrint,
 }: PosTicketProps) {
@@ -89,7 +90,7 @@ export function PosTicket({
 
         <div id="ticket-content" className="ticket-content-print p-6 font-mono text-sm text-dark-800">
           <div className="text-center space-y-0.5">
-            <p className="font-bold text-base">{RESTAURANT_NAME}</p>
+            <p className="font-bold text-base">{restaurantName}</p>
             {RESTAURANT_PHONE && (
               <p className="text-dark-600">Tél. {RESTAURANT_PHONE}</p>
             )}

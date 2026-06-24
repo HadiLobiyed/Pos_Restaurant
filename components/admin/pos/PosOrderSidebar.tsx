@@ -30,6 +30,7 @@ export function PosOrderSidebar({
   onReset,
   onAfterOrderCreated,
   loadedOrderId,
+  restaurantName = "Restaurant POS",
 }: {
   cart: PosCartItem[];
   /** Contenu du ticket (panier actuel ou dernier envoi) */
@@ -54,6 +55,7 @@ export function PosOrderSidebar({
   onReset: () => void;
   onAfterOrderCreated: (order: { publicCode?: string | null }) => void;
   loadedOrderId?: string | null;
+  restaurantName?: string;
 }) {
   const router = useRouter();
   const [sending, setSending] = useState<"kot" | "bill" | "bill_payment" | "encaisser" | null>(null);
@@ -431,6 +433,7 @@ export function PosOrderSidebar({
           customerName={customerName}
           customerPhone={customerPhone}
           customerAddress={customerAddress}
+          restaurantName={restaurantName}
           onClose={() => setShowTicket(false)}
           onPrint={() => {
             if (isPrintingRef.current) return;

@@ -1,0 +1,1 @@
+"use strict";exports.id=8311,exports.ids=[8311],exports.modules={98311:(t,e,i)=>{i.d(e,{recordStockPurchase:()=>a});async function a(t,e){e.quantity<=0||e.unitPrice<=0||await t.stockPurchase.create({data:{type:e.type,itemId:e.itemId,itemName:e.itemName,quantity:e.quantity,unitPrice:e.unitPrice,totalCost:e.quantity*e.unitPrice}})}}};

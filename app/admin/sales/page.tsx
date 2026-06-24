@@ -6,6 +6,7 @@ import { ExportSalesButton } from "@/components/admin/ExportSalesButton";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { calcBeverageProfitFromOrderItems } from "@/lib/beverageProfit";
+import { isArchivedDate, runDataRetention } from "@/lib/dataRetention";
 
 export const dynamic = "force-dynamic";
 
@@ -15,36 +16,55 @@ export default async function SalesPage({
   searchParams: { date?: string };
 }) {
   await getServerSession(authOptions);
+  await runDataRetention().catch(() => {});
 
   const { date } = searchParams ?? {};
   const selectedDate = date ? new Date(date) : new Date();
   const dayStart = startOfDay(selectedDate);
   const dayEnd = endOfDay(selectedDate);
+  const dayKey = format(selectedDate, "yyyy-MM-dd");
+  const archived = isArchivedDate(selectedDate);
 
-  const payments = await prisma.payment.findMany({
-    where: { createdAt: { gte: dayStart, lte: dayEnd } },
-    include: {
-      order: {
+  const payments = archived
+    ? []
+    : await prisma.payment.findMany({
+        where: { createdAt: { gte: dayStart, lte: dayEnd } },
         include: {
-          table: true,
-          orderItems: {
-            include: { menuItem: { include: { category: true } } },
+          order: {
+            include: {
+              table: true,
+              orderItems: {
+                include: { menuItem: { include: { category: true } } },
+              },
+            },
           },
         },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+        orderBy: { createdAt: "desc" },
+      });
+
+  const daySummary = archived
+    ? await prisma.dailySalesSummary.findUnique({ where: { date: dayKey } })
+    : null;
 
   const paidPayments = payments.filter((p) => p.status === "PAID");
-  const totalRevenue = paidPayments.reduce((sum, p) => sum + Number(p.total), 0);
-  const dayBeverageProfit = paidPayments.reduce(
-    (sum, p) => sum + calcBeverageProfitFromOrderItems(p.order.orderItems),
-    0
-  );
+  const totalRevenue = archived
+    ? Number(daySummary?.totalRevenue ?? 0)
+    : paidPayments.reduce((sum, p) => sum + Number(p.total), 0);
+  const dayBeverageProfit = archived
+    ? Number(daySummary?.beverageProfit ?? 0)
+    : paidPayments.reduce(
+        (sum, p) => sum + calcBeverageProfitFromOrderItems(p.order.orderItems),
+        0
+      );
 
-  const allPaidPayments = await prisma.payment.findMany({
-    where: { status: "PAID" },
+  const recentSummaries = await prisma.dailySalesSummary.findMany({
+    orderBy: { date: "desc" },
+  });
+
+  const recentDayStart = startOfDay(new Date());
+  recentDayStart.setDate(recentDayStart.getDate() - 6);
+  const recentPayments = await prisma.payment.findMany({
+    where: { createdAt: { gte: recentDayStart }, status: "PAID" },
     include: {
       order: {
         include: {
@@ -54,18 +74,20 @@ export default async function SalesPage({
         },
       },
     },
-    orderBy: { createdAt: "desc" },
   });
 
   const dailyProfitsMap = new Map<string, number>();
-  for (const payment of allPaidPayments) {
-    const dayKey = format(payment.createdAt, "yyyy-MM-dd");
+  for (const summary of recentSummaries) {
+    dailyProfitsMap.set(summary.date, Number(summary.beverageProfit));
+  }
+  for (const payment of recentPayments) {
+    const key = format(payment.createdAt, "yyyy-MM-dd");
     const profit = calcBeverageProfitFromOrderItems(payment.order.orderItems);
-    dailyProfitsMap.set(dayKey, (dailyProfitsMap.get(dayKey) ?? 0) + profit);
+    dailyProfitsMap.set(key, (dailyProfitsMap.get(key) ?? 0) + profit);
   }
   const dailyProfits = Array.from(dailyProfitsMap.entries())
     .sort(([a], [b]) => b.localeCompare(a))
-    .map(([dayKey, profit]) => ({ dayKey, profit }));
+    .map(([dayKeyEntry, profit]) => ({ dayKey: dayKeyEntry, profit }));
 
   return (
     <div className="p-8">
@@ -74,6 +96,11 @@ export default async function SalesPage({
         <ExportSalesButton date={format(selectedDate, "yyyy-MM-dd")} />
       </div>
       <SalesFilters defaultDate={date ?? format(new Date(), "yyyy-MM-dd")} />
+      {archived && (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Données archivées — seul le total journalier est conservé au-delà de 7 jours.
+        </p>
+      )}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="card">
           <p className="text-sm font-medium text-dark-500">
@@ -112,10 +139,10 @@ export default async function SalesPage({
                 </td>
               </tr>
             ) : (
-              dailyProfits.map(({ dayKey, profit }) => (
-                <tr key={dayKey} className="transition hover:bg-dark-50/50">
+              dailyProfits.map(({ dayKey: dk, profit }) => (
+                <tr key={dk} className="transition hover:bg-dark-50/50">
                   <td className="px-6 py-3 text-sm text-dark-700">
-                    {format(new Date(dayKey), "d MMM yyyy", { locale: fr })}
+                    {format(new Date(dk), "d MMM yyyy", { locale: fr })}
                   </td>
                   <td className="px-6 py-3 font-semibold text-emerald-700">
                     {profit.toFixed(2)} DA
@@ -139,7 +166,32 @@ export default async function SalesPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-dark-100">
-            {payments.length === 0 ? (
+            {archived ? (
+              daySummary ? (
+                <tr className="bg-dark-50/30">
+                  <td className="px-6 py-4 text-sm text-dark-500">—</td>
+                  <td className="px-6 py-4 font-medium text-dark-800">Total du jour</td>
+                  <td className="px-6 py-4 text-sm text-dark-600">
+                    {daySummary.totalSales} vente{daySummary.totalSales > 1 ? "s" : ""} (
+                    {daySummary.paidCount} payée{daySummary.paidCount > 1 ? "s" : ""})
+                  </td>
+                  <td className="px-6 py-4 font-semibold text-dark-800">
+                    {Number(daySummary.totalRevenue).toFixed(2)} DA
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex rounded-lg bg-dark-100 px-2.5 py-1 text-xs font-medium text-dark-700">
+                      Archivé
+                    </span>
+                  </td>
+                </tr>
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-dark-500">
+                    Aucune vente pour cette date.
+                  </td>
+                </tr>
+              )
+            ) : payments.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-dark-500">
                   Aucune vente pour cette date.

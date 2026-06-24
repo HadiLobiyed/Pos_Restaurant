@@ -27,6 +27,7 @@ const links: Array<{
 export function AdminSidebar() {
   const pathname = usePathname();
   const [pendingReservations, setPendingReservations] = useState<number | null>(null);
+  const [restaurantName, setRestaurantName] = useState("Restaurant POS");
   const { data: session } = useSession();
   const role = session?.user?.role ?? "STAFF";
   const isAdmin = role === "ADMIN";
@@ -44,6 +45,17 @@ export function AdminSidebar() {
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    fetch("/api/admin/restaurant-settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.restaurantName === "string" && d.restaurantName.trim()) {
+          setRestaurantName(d.restaurantName.trim());
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <aside className="flex w-64 flex-col bg-dark-900 text-white">
       <div className="border-b border-white/10 px-6 py-5">
@@ -52,9 +64,9 @@ export function AdminSidebar() {
           className="flex items-center gap-2 text-xl font-bold"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-500 text-lg">
-            R
+            {restaurantName.charAt(0).toUpperCase()}
           </span>
-          Restaurant POS
+          <span className="truncate">{restaurantName}</span>
         </Link>
       </div>
       <nav className="flex-1 space-y-1 p-4">

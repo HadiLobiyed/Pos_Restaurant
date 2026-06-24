@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { GlobalFooter } from "@/components/GlobalFooter";
 
 const font = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -20,7 +21,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${font.variable} font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <div className="flex-1">{children}</div>
+            <GlobalFooter />
+          </div>
+        </Providers>
       </body>
     </html>
   );

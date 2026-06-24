@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import jsQR from "jsqr";
 import { parseTableIdFromScan } from "@/lib/tableQr";
 
 type Props = {
@@ -16,11 +17,13 @@ type BarcodeDetectorLike = {
 
 export function QrScanner({ onScan, onError }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
   const scanningRef = useRef(false);
   const lastScanRef = useRef(0);
   const detectorRef = useRef<BarcodeDetectorLike | null>(null);
+  const useJsQrRef = useRef(false);
   const [active, setActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [manualUrl, setManualUrl] = useState("");
@@ -48,6 +51,35 @@ export function QrScanner({ onScan, onError }: Props) {
     [onError, onScan, stopCamera]
   );
 
+  const scanWithJsQr = useCallback(
+    (video: HTMLVideoElement): boolean => {
+      if (!canvasRef.current) {
+        canvasRef.current = document.createElement("canvas");
+      }
+      const canvas = canvasRef.current;
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (w <= 0 || h <= 0) return false;
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return false;
+
+      ctx.drawImage(video, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const result = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
+      });
+      if (result?.data) {
+        handleDecoded(result.data);
+        return true;
+      }
+      return false;
+    },
+    [handleDecoded]
+  );
+
   const scanFrame = useCallback(async () => {
     if (!scanningRef.current) return;
 
@@ -68,6 +100,8 @@ export function QrScanner({ onScan, onError }: Props) {
             handleDecoded(codes[0].rawValue);
             return;
           }
+        } else if (useJsQrRef.current) {
+          if (scanWithJsQr(video)) return;
         }
       } catch {
         /* frame ignorée */
@@ -75,7 +109,7 @@ export function QrScanner({ onScan, onError }: Props) {
     }
 
     rafRef.current = requestAnimationFrame(scanFrame);
-  }, [handleDecoded]);
+  }, [handleDecoded, scanWithJsQr]);
 
   const startCamera = useCallback(async () => {
     setCameraError(false);
@@ -111,11 +145,7 @@ export function QrScanner({ onScan, onError }: Props) {
       detectorRef.current = BarcodeDetectorCtor
         ? new BarcodeDetectorCtor({ formats: ["qr_code"] })
         : null;
-
-      if (!detectorRef.current) {
-        setCameraError(true);
-        onError?.("Scan automatique non supporté sur ce navigateur. Collez le lien du QR ci-dessous.");
-      }
+      useJsQrRef.current = !detectorRef.current;
 
       setActive(true);
       scanningRef.current = true;
