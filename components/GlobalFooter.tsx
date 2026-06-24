@@ -9,7 +9,7 @@ export function GlobalFooter() {
         rel="noopener noreferrer"
         className="font-medium text-dark-600 transition hover:text-primary-600"
       >
-        Powred By NOBLEX 3
+        Powred By Noblex
       </Link>
     </footer>
   );
