@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { format, parseISO, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
 type ReservationRow = {
@@ -17,10 +17,34 @@ type ReservationRow = {
   handled: boolean;
 };
 
+type ReservationFilter = "upcoming" | "all";
+
+function isUpcomingReservation(r: ReservationRow, today: string): boolean {
+  return Boolean(r.reservationDate && r.reservationDate >= today);
+}
+
 export default function AdminReservationsPage() {
   const [rows, setRows] = useState<ReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ReservationFilter>("upcoming");
+
+  const today = useMemo(() => format(startOfDay(new Date()), "yyyy-MM-dd"), []);
+
+  const filteredRows = useMemo(() => {
+    const list =
+      filter === "upcoming" ? rows.filter((r) => isUpcomingReservation(r, today)) : rows;
+
+    if (filter === "upcoming") {
+      return [...list].sort((a, b) => {
+        const dateCmp = (a.reservationDate ?? "").localeCompare(b.reservationDate ?? "");
+        if (dateCmp !== 0) return dateCmp;
+        return (a.reservationTime ?? "").localeCompare(b.reservationTime ?? "");
+      });
+    }
+
+    return list;
+  }, [rows, filter, today]);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/reservations");
@@ -57,6 +81,27 @@ export default function AdminReservationsPage() {
         Demandes de table avec date et heure. Les nouvelles réservations affichent un badge sur l’onglet jusqu’à traitement.
       </p>
 
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setFilter("upcoming")}
+          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+            filter === "upcoming" ? "bg-primary-500 text-white" : "border border-dark-200 bg-white text-dark-700"
+          }`}
+        >
+          Aujourd&apos;hui & à venir
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter("all")}
+          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+            filter === "all" ? "bg-primary-500 text-white" : "border border-dark-200 bg-white text-dark-700"
+          }`}
+        >
+          Toutes
+        </button>
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-dark-200 bg-white shadow-card">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-dark-200 bg-dark-50/80">
@@ -71,14 +116,16 @@ export default function AdminReservationsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-dark-100">
-            {rows.length === 0 ? (
+            {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-dark-500">
-                  Aucune réservation pour le moment.
+                  {filter === "upcoming"
+                    ? "Aucune réservation pour aujourd'hui ou les jours à venir."
+                    : "Aucune réservation pour le moment."}
                 </td>
               </tr>
             ) : (
-              rows.map((r) => (
+              filteredRows.map((r) => (
                 <tr key={r.id} className={r.handled ? "bg-white" : "bg-primary-50/40"}>
                   <td className="px-4 py-3 font-medium text-dark-900">
                     <div className="flex items-center gap-2">
