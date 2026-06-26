@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { PosCartItem } from "@/app/admin/pos/page";
 
@@ -18,11 +18,10 @@ type PosTicketProps = {
   customerPhone?: string;
   customerAddress?: string;
   restaurantName?: string;
-  /** Impression silencieuse au montage (sans modal ni bouton) */
+  /** Affiche le ticket hors écran pour impression automatique (sans modal) */
   autoPrint?: boolean;
   onClose?: () => void;
   onPrint?: () => void;
-  onPrintDone?: () => void;
 };
 
 function formatDate() {
@@ -50,9 +49,7 @@ export function PosTicket({
   autoPrint = false,
   onClose,
   onPrint,
-  onPrintDone,
 }: PosTicketProps) {
-  const printedRef = useRef(false);
   const subtotal = cart.reduce((s, c) => {
     const supSum = Array.isArray(c.selectedSupplements)
       ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
@@ -62,34 +59,10 @@ export function PosTicket({
   const total = subtotal;
 
   useEffect(() => {
+    if (autoPrint) return;
     document.body.classList.add("ticket-modal-open");
     return () => document.body.classList.remove("ticket-modal-open");
-  }, []);
-
-  useEffect(() => {
-    if (!autoPrint) return;
-
-    const finish = () => {
-      document.body.classList.remove("ticket-modal-open");
-      onPrintDone?.();
-    };
-
-    const runPrint = () => {
-      if (printedRef.current) return;
-      printedRef.current = true;
-      window.print();
-    };
-
-    const afterPrint = () => finish();
-    window.addEventListener("afterprint", afterPrint);
-
-    const t = window.setTimeout(runPrint, 150);
-
-    return () => {
-      window.clearTimeout(t);
-      window.removeEventListener("afterprint", afterPrint);
-    };
-  }, [autoPrint, onPrintDone]);
+  }, [autoPrint]);
 
   const handlePrint = useCallback(() => {
     document.body.classList.add("ticket-modal-open");

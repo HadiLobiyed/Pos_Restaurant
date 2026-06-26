@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import {
@@ -20,7 +19,6 @@ type KitchenPrintTicketProps = {
   createdAt: string;
   station: KitchenStation;
   items: KitchenItem[];
-  onDone: () => void;
 };
 
 export function KitchenPrintTicket({
@@ -28,36 +26,7 @@ export function KitchenPrintTicket({
   createdAt,
   station,
   items,
-  onDone,
 }: KitchenPrintTicketProps) {
-  const printedRef = useRef(false);
-
-  useEffect(() => {
-    document.body.classList.add("ticket-modal-open");
-
-    const finish = () => {
-      document.body.classList.remove("ticket-modal-open");
-      onDone();
-    };
-
-    const runPrint = () => {
-      if (printedRef.current) return;
-      printedRef.current = true;
-      window.print();
-    };
-
-    const afterPrint = () => finish();
-    window.addEventListener("afterprint", afterPrint);
-
-    const t = window.setTimeout(runPrint, 150);
-
-    return () => {
-      window.clearTimeout(t);
-      window.removeEventListener("afterprint", afterPrint);
-      document.body.classList.remove("ticket-modal-open");
-    };
-  }, [onDone]);
-
   const ticket = (
     <div className="ticket-print-root fixed inset-0 z-[200] pointer-events-none opacity-0 print:opacity-100 print:pointer-events-auto">
       <div className="ticket-modal-container bg-white font-mono text-sm text-dark-800">

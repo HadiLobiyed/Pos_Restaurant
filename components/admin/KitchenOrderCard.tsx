@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { format } from "date-fns";
 import { KitchenPrintTicket } from "@/components/admin/KitchenPrintTicket";
+import { prepareAutoPrintFrame, printTicketFromSelector, waitForNextPaint } from "@/lib/auto-print";
 import {
   KITCHEN_STATION_LABELS,
   type KitchenStation,
@@ -76,6 +78,8 @@ export function KitchenOrderCard({
   }
 
   async function handlePrintClick() {
+    prepareAutoPrintFrame();
+
     const pendingItems = items.filter((oi) => oi.status === "PENDING");
     if (pendingItems.length > 0) {
       setUpdating("print-batch");
@@ -91,7 +95,11 @@ export function KitchenOrderCard({
       setUpdating(null);
       onStatusUpdated();
     }
-    setPrinting(true);
+
+    flushSync(() => setPrinting(true));
+    await waitForNextPaint();
+    await printTicketFromSelector();
+    setPrinting(false);
   }
 
   const cardSurface =
@@ -211,7 +219,6 @@ export function KitchenOrderCard({
           createdAt={order.createdAt}
           station={tab}
           items={items}
-          onDone={() => setPrinting(false)}
         />
       )}
     </>

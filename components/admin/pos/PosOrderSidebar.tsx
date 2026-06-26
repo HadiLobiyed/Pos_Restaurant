@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { PosCartItem } from "@/app/admin/pos/page";
+import { prepareAutoPrintFrame, printTicketFromSelector, waitForNextPaint } from "@/lib/auto-print";
 import { PosTicket } from "./PosTicket";
 
 type Table = { id: string; number: number; reserved: boolean };
@@ -138,6 +140,7 @@ export function PosOrderSidebar({
 
   async function encaisser() {
     if (!loadedOrderId) return;
+    prepareAutoPrintFrame();
     setSending("encaisser");
     setMessage(null);
     try {
@@ -148,8 +151,13 @@ export function PosOrderSidebar({
       });
       if (!payRes.ok) throw new Error("Erreur encaissement");
       setMessage({ type: "ok", text: "Paiement enregistré." });
-      setAutoPrintTicket(true);
+
+      flushSync(() => setAutoPrintTicket(true));
+      await waitForNextPaint();
+      await printTicketFromSelector();
+      handleEncaissePrintDone();
     } catch (e) {
+      setAutoPrintTicket(false);
       setMessage({ type: "error", text: e instanceof Error ? e.message : "Erreur" });
     } finally {
       setSending(null);
@@ -441,7 +449,6 @@ export function PosOrderSidebar({
           customerPhone={customerPhone}
           customerAddress={customerAddress}
           restaurantName={restaurantName}
-          onPrintDone={handleEncaissePrintDone}
         />
       )}
 
