@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PosCartItem } from "@/app/admin/pos/page";
 import { PosTicket } from "./PosTicket";
@@ -61,6 +61,7 @@ export function PosOrderSidebar({
   const [sending, setSending] = useState<"kot" | "bill" | "bill_payment" | "encaisser" | null>(null);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
+  const [autoPrintTicket, setAutoPrintTicket] = useState(false);
   const isPrintingRef = useRef(false);
 
   const subtotal = cart.reduce((s, c) => {
@@ -71,6 +72,12 @@ export function PosOrderSidebar({
   }, 0);
   const total = subtotal;
   const tableNumber = tableId && Array.isArray(tables) ? tables.find((t) => t.id === tableId)?.number : undefined;
+
+  const handleEncaissePrintDone = useCallback(() => {
+    setAutoPrintTicket(false);
+    onReset();
+    router.push("/admin/dashboard");
+  }, [onReset, router]);
 
   async function sendKot(andPrint = false) {
     if (orderType === "DINE_IN" && !tableId) {
@@ -141,8 +148,7 @@ export function PosOrderSidebar({
       });
       if (!payRes.ok) throw new Error("Erreur encaissement");
       setMessage({ type: "ok", text: "Paiement enregistré." });
-      onReset();
-      router.push("/admin/dashboard");
+      setAutoPrintTicket(true);
     } catch (e) {
       setMessage({ type: "error", text: e instanceof Error ? e.message : "Erreur" });
     } finally {
@@ -422,6 +428,22 @@ export function PosOrderSidebar({
           </button>
         </div>
       </div>
+
+      {autoPrintTicket && (
+        <PosTicket
+          autoPrint
+          orderNumber={orderNumber}
+          cart={ticketCart}
+          tableNumber={tableNumber}
+          orderType={orderType}
+          publicCode={orderPublicCode}
+          customerName={customerName}
+          customerPhone={customerPhone}
+          customerAddress={customerAddress}
+          restaurantName={restaurantName}
+          onPrintDone={handleEncaissePrintDone}
+        />
+      )}
 
       {showTicket && (
         <PosTicket

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { PosCartItem } from "@/app/admin/pos/page";
 
@@ -18,8 +18,11 @@ type PosTicketProps = {
   customerPhone?: string;
   customerAddress?: string;
   restaurantName?: string;
-  onClose: () => void;
-  onPrint: () => void;
+  /** Impression silencieuse au montage (sans modal ni bouton) */
+  autoPrint?: boolean;
+  onClose?: () => void;
+  onPrint?: () => void;
+  onPrintDone?: () => void;
 };
 
 function formatDate() {
@@ -44,9 +47,12 @@ export function PosTicket({
   customerPhone,
   customerAddress,
   restaurantName = "Restaurant POS",
+  autoPrint = false,
   onClose,
   onPrint,
+  onPrintDone,
 }: PosTicketProps) {
+  const printedRef = useRef(false);
   const subtotal = cart.reduce((s, c) => {
     const supSum = Array.isArray(c.selectedSupplements)
       ? c.selectedSupplements.reduce((acc, sup) => acc + Number(sup.price || 0), 0)
@@ -60,35 +66,38 @@ export function PosTicket({
     return () => document.body.classList.remove("ticket-modal-open");
   }, []);
 
+  useEffect(() => {
+    if (!autoPrint) return;
+
+    const finish = () => {
+      document.body.classList.remove("ticket-modal-open");
+      onPrintDone?.();
+    };
+
+    const runPrint = () => {
+      if (printedRef.current) return;
+      printedRef.current = true;
+      window.print();
+    };
+
+    const afterPrint = () => finish();
+    window.addEventListener("afterprint", afterPrint);
+
+    const t = window.setTimeout(runPrint, 150);
+
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("afterprint", afterPrint);
+    };
+  }, [autoPrint, onPrintDone]);
+
   const handlePrint = useCallback(() => {
     document.body.classList.add("ticket-modal-open");
-    onPrint();
+    onPrint?.();
   }, [onPrint]);
 
-  const modal = (
-    <div className="ticket-print-root ticket-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="ticket-modal-container bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
-        <div className="p-4 border-b border-dark-200 flex justify-between items-center print:hidden">
-          <h3 className="font-semibold text-dark-800">Ticket</h3>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-3 py-1.5 rounded bg-primary-500 text-white text-sm font-medium hover:bg-primary-600"
-            >
-              Imprimer
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 rounded border border-dark-300 text-dark-700 text-sm hover:bg-dark-50"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-
-        <div id="ticket-content" className="ticket-content-print p-6 font-mono text-sm text-dark-800">
+  const ticketContent = (
+    <div id="ticket-content" className="ticket-content-print p-6 font-mono text-sm text-dark-800">
           <div className="text-center space-y-0.5">
             <p className="font-bold text-base">{restaurantName}</p>
             {RESTAURANT_PHONE && (
@@ -176,7 +185,36 @@ export function PosTicket({
           </div>
 
           <p className="text-center mt-6 text-dark-600">Merci pour votre visite !</p>
+    </div>
+  );
+
+  const modal = autoPrint ? (
+    <div className="ticket-print-root fixed inset-0 z-[200] pointer-events-none opacity-0 print:opacity-100 print:pointer-events-auto">
+      <div className="ticket-modal-container bg-white font-mono text-sm text-dark-800">{ticketContent}</div>
+    </div>
+  ) : (
+    <div className="ticket-print-root ticket-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+      <div className="ticket-modal-container bg-white rounded-lg shadow-xl max-w-sm w-full max-h-[90vh] overflow-auto print:max-h-none print:overflow-visible print:shadow-none print:max-w-[80mm]">
+        <div className="p-4 border-b border-dark-200 flex justify-between items-center print:hidden">
+          <h3 className="font-semibold text-dark-800">Ticket</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-3 py-1.5 rounded bg-primary-500 text-white text-sm font-medium hover:bg-primary-600"
+            >
+              Imprimer
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded border border-dark-300 text-dark-700 text-sm hover:bg-dark-50"
+            >
+              Fermer
+            </button>
+          </div>
         </div>
+        {ticketContent}
       </div>
     </div>
   );
