@@ -53,6 +53,8 @@ model RestaurantSettings {
   restaurantName String   @default("Restaurant POS")
   /// { "0": { "closed": false, "ranges": [{ "start": "12:00", "end": "14:30" }] }, ... } clés 0=dimanche … 6=samedi
   openingHours Json?
+  /// Contenu éditable page d'accueil (textes + URLs images)
+  homePageContent Json?
   updatedAt      DateTime @updatedAt
 }
 

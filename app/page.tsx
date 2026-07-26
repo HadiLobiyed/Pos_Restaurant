@@ -1,25 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getHomePageContent } from "@/lib/homePageSettings";
 
-const img = {
-  /** Même cliché que `salle` (ID fiable) — l’ancien photo-1517248135467… ne se charge plus chez certains navigateurs / réseaux */
-  hero: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1600&h=2000&q=85",
-  plat1: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80",
-  plat2: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=900&q=80",
-  plat3: "https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80",
-  salle: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80",
-  vin: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80",
-  detail: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80",
-  banner: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1600&q=80",
-} as const;
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const c = await getHomePageContent();
+
   return (
     <main className="min-h-screen bg-dark-950 text-dark-100">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-dark-950/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-6">
           <Link href="/" className="font-serif text-xl font-semibold tracking-wide text-white md:text-2xl">
-            La Maison
+            {c.headerName}
           </Link>
           <nav className="flex flex-wrap items-center justify-end gap-1 text-sm font-medium md:gap-6 md:text-base">
             <Link href="/menu" className="rounded-lg px-2 py-2 text-dark-200 transition hover:text-white md:px-0">
@@ -41,7 +34,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="relative border-b border-white/5 overflow-x-clip">
+      <section className="relative overflow-x-clip border-b border-white/5">
         <div className="absolute inset-0 bg-gradient-to-br from-dark-900 via-dark-950 to-primary-950/80" aria-hidden />
         <div
           className="absolute inset-0 opacity-[0.08]"
@@ -54,14 +47,13 @@ export default function HomePage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:gap-12 md:px-6 md:py-24">
           <div>
             <p className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-primary-300">
-              Restaurant · Cuisine du marché
+              {c.hero.tagline}
             </p>
             <h1 className="animate-fade-in mb-6 font-serif text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl md:leading-tight">
-              Une table chaleureuse, des assiettes généreuses
+              {c.hero.title}
             </h1>
             <p className="animate-slide-up mb-8 max-w-xl text-lg leading-relaxed text-dark-300 md:text-xl">
-              Venez partager un moment convivial autour de plats préparés avec des produits frais. Sur place, à emporter ou
-              en livraison.
+              {c.hero.description}
             </p>
             <div className="animate-slide-up mb-10 flex flex-wrap gap-3">
               <Link
@@ -84,29 +76,22 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="flex flex-wrap gap-6 border-t border-white/10 pt-8 text-sm text-dark-400">
-              <div>
-                <p className="font-semibold text-white">Terrasse</p>
-                <p>Quand la météo le permet</p>
-              </div>
-              <div>
-                <p className="font-semibold text-white">Parking</p>
-                <p>Places à proximité</p>
-              </div>
-              <div>
-                <p className="font-semibold text-white">Groupes</p>
-                <p>Sur réservation</p>
-              </div>
+              {c.highlights.map((h) => (
+                <div key={h.title}>
+                  <p className="font-semibold text-white">{h.title}</p>
+                  <p>{h.subtitle}</p>
+                </div>
+              ))}
             </div>
           </div>
           <div className="relative mx-auto w-full max-w-md motion-safe:animate-hero-reveal md:max-w-none">
-            <div className="relative rounded-[1.65rem] bg-gradient-to-br from-primary-400 via-accent-400 to-primary-600 p-[2px] animate-hero-glow-pulse">
+            <div className="relative animate-hero-glow-pulse rounded-[1.65rem] bg-gradient-to-br from-primary-400 via-accent-400 to-primary-600 p-[2px]">
               <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-dark-900 md:aspect-[3/4]">
-                {/* next/image + fill : le parent direct doit être position: relative (pas seulement absolute) */}
                 <div className="absolute inset-0 will-change-transform motion-safe:animate-hero-kenburns">
                   <div className="relative h-full min-h-[200px] w-full">
                     <Image
-                      src={img.hero}
-                      alt="Salle du restaurant, tables dressées et ambiance tamisée"
+                      src={c.hero.image.url}
+                      alt={c.hero.image.alt}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 50vw"
@@ -119,62 +104,46 @@ export default function HomePage() {
                   className="pointer-events-none absolute inset-0 bg-gradient-to-t from-dark-950/70 via-dark-950/10 to-transparent"
                   aria-hidden
                 />
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-40 mix-blend-overlay"
-                  style={{
-                    background:
-                      "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,255,255,0.25), transparent 55%)",
-                  }}
-                  aria-hidden
-                />
                 <p className="absolute bottom-5 left-5 right-5 z-10 text-sm font-medium text-white/95 drop-shadow-md">
-                  Une salle lumineuse pour vos déjeuners et dîners entre amis.
+                  {c.hero.caption}
                 </p>
               </div>
             </div>
-          
           </div>
         </div>
       </section>
 
       <div className="border-b border-white/10 bg-primary-950/30 py-4">
         <p className="mx-auto max-w-6xl px-4 text-center text-sm font-medium tracking-wide text-primary-200/90 md:px-6">
-          Cuisine maison · Carte renouvelée · Accueil du midi au soir · Options végétariennes sur demande
+          {c.bannerStrip}
         </p>
       </div>
 
       <section className="mx-auto max-w-6xl px-4 py-14 md:px-6 md:py-20">
         <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            { n: "15+", l: "Années d'expérience" },
-            { n: "80", l: "Couverts" },
-            { n: "4,8", l: "Avis clients" },
-            { n: "100%", l: "Fait maison" },
-          ].map((s) => (
+          {c.stats.map((s) => (
             <div
-              key={s.l}
+              key={s.label}
               className="rounded-2xl border border-white/10 bg-dark-900/50 px-4 py-6 text-center backdrop-blur-sm"
             >
-              <p className="font-serif text-3xl font-bold text-white md:text-4xl">{s.n}</p>
-              <p className="mt-1 text-xs text-dark-400 md:text-sm">{s.l}</p>
+              <p className="font-serif text-3xl font-bold text-white md:text-4xl">{s.value}</p>
+              <p className="mt-1 text-xs text-dark-400 md:text-sm">{s.label}</p>
             </div>
           ))}
         </div>
 
-        <h2 className="mb-2 text-center font-serif text-3xl font-bold text-white md:text-4xl">En quelques images</h2>
-        <p className="mx-auto mb-10 max-w-2xl text-center text-dark-400">
-          Des produits choisis avec soin, une présentation soignée et le plaisir du partage.
-        </p>
+        <h2 className="mb-2 text-center font-serif text-3xl font-bold text-white md:text-4xl">{c.gallery.title}</h2>
+        <p className="mx-auto mb-10 max-w-2xl text-center text-dark-400">{c.gallery.subtitle}</p>
         <div className="grid gap-4 md:grid-cols-12 md:gap-5">
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 md:col-span-7 md:aspect-auto md:min-h-[320px]">
-            <Image src={img.plat1} alt="Plat du jour, viande et légumes rôtis" fill className="object-cover" sizes="(max-width: 768px) 100vw, 58vw" />
+            <Image src={c.gallery.plat1.url} alt={c.gallery.plat1.alt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 58vw" unoptimized />
           </div>
           <div className="grid grid-cols-2 gap-4 md:col-span-5 md:grid-cols-1 md:gap-5">
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10">
-              <Image src={img.plat2} alt="Pizza ou plat italien garni" fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+              <Image src={c.gallery.plat2.url} alt={c.gallery.plat2.alt} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" unoptimized />
             </div>
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10">
-              <Image src={img.plat3} alt="Dessert gourmand" fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+              <Image src={c.gallery.plat3.url} alt={c.gallery.plat3.alt} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" unoptimized />
             </div>
           </div>
         </div>
@@ -183,70 +152,36 @@ export default function HomePage() {
       <section className="border-y border-white/10 bg-dark-900/35 py-14 md:py-20">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2 md:px-6">
           <div className="relative aspect-[5/4] overflow-hidden rounded-2xl border border-white/10 shadow-elevated">
-            <Image src={img.salle} alt="Tables dressées dans la salle du restaurant" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+            <Image src={c.ambiance.image.url} alt={c.ambiance.image.alt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" unoptimized />
           </div>
           <div>
-            <h2 className="mb-4 font-serif text-3xl font-bold text-white md:text-4xl">Un cadre pensé pour vos moments</h2>
-            <p className="mb-6 leading-relaxed text-dark-300">
-              Nos équipes veillent à ce que chaque service se déroule dans la bonne humeur : table pour deux, grand groupe ou
-              repas d&apos;affaires, nous adaptons l&apos;organisation pour que vous soyez à l&apos;aise.
-            </p>
+            <h2 className="mb-4 font-serif text-3xl font-bold text-white md:text-4xl">{c.ambiance.title}</h2>
+            <p className="mb-6 leading-relaxed text-dark-300">{c.ambiance.description}</p>
             <ul className="space-y-3 text-dark-200">
-              <li className="flex gap-3">
-                <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600/30 text-xs font-bold text-primary-300">
-                  ✓
-                </span>
-                Menu enfant et options sans gluten sur demande (prévenir à la réservation).
-              </li>
-              <li className="flex gap-3">
-                <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600/30 text-xs font-bold text-primary-300">
-                  ✓
-                </span>
-                Carte des vins sélectionnée pour accompagner nos plats.
-              </li>
-              <li className="flex gap-3">
-                <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600/30 text-xs font-bold text-primary-300">
-                  ✓
-                </span>
-                Commande en ligne et retrait au comptoir sans attente inutile.
-              </li>
+              {c.ambiance.bullets.map((bullet) => (
+                <li key={bullet} className="flex gap-3">
+                  <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600/30 text-xs font-bold text-primary-300">
+                    ✓
+                  </span>
+                  {bullet}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-14 md:px-6 md:py-20">
-        <h2 className="mb-3 text-center font-serif text-3xl font-bold text-white md:text-4xl">Pourquoi nous rendre visite</h2>
-        <p className="mx-auto mb-12 max-w-2xl text-center text-dark-400">
-          Le goût du fait maison, le service attentif et une ambiance où l&apos;on se sent comme à la maison.
-        </p>
+        <h2 className="mb-3 text-center font-serif text-3xl font-bold text-white md:text-4xl">{c.features.title}</h2>
+        <p className="mx-auto mb-12 max-w-2xl text-center text-dark-400">{c.features.subtitle}</p>
         <div className="grid gap-6 md:grid-cols-3">
-          {[
-            {
-              title: "Produits frais",
-              text: "Nos menus évoluent au fil des saisons, en privilégiant les producteurs locaux lorsque c'est possible.",
-              img: img.plat2,
-              alt: "Ingrédients et plat coloré",
-            },
-            {
-              title: "Ambiance conviviale",
-              text: "Idéal pour un dîner en couple, en famille ou entre amis. Réservez pour être sûr d'avoir une table.",
-              img: img.banner,
-              alt: "Ambiance du restaurant et du bar, lumière chaude",
-            },
-            {
-              title: "Comme vous préférez",
-              text: "Sur place au restaurant, à emporter ou livrés chez vous — la même qualité dans chaque commande.",
-              img: img.vin,
-              alt: "Verres de vin sur une table",
-            },
-          ].map((item) => (
+          {c.features.items.map((item) => (
             <article
               key={item.title}
               className="overflow-hidden rounded-2xl border border-white/10 bg-dark-900/60 shadow-card backdrop-blur-sm transition hover:border-primary-500/35"
             >
               <div className="relative aspect-[16/10] w-full">
-                <Image src={item.img} alt={item.alt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+                <Image src={item.image.url} alt={item.image.alt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" unoptimized />
               </div>
               <div className="p-6">
                 <h3 className="mb-3 font-serif text-xl font-semibold text-white">{item.title}</h3>
@@ -259,22 +194,9 @@ export default function HomePage() {
 
       <section className="border-y border-white/10 bg-dark-900/40 py-14 md:py-20">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
-          <h2 className="mb-10 text-center font-serif text-3xl font-bold text-white md:text-4xl">Ils en parlent</h2>
+          <h2 className="mb-10 text-center font-serif text-3xl font-bold text-white md:text-4xl">{c.testimonials.title}</h2>
           <div className="grid gap-6 md:grid-cols-3">
-            {[
-              {
-                quote: "Accueil chaleureux et assiettes copieuses. On y retourne dès que possible !",
-                author: "Camille L.",
-              },
-              {
-                quote: "Parfait pour un dîner en famille. Les enfants ont adoré, et les desserts sont une tuerie.",
-                author: "Mehdi R.",
-              },
-              {
-                quote: "Commande à emporter toujours prête à l'heure. Même qualité qu'au restaurant.",
-                author: "Sophie T.",
-              },
-            ].map((t) => (
+            {c.testimonials.items.map((t) => (
               <blockquote
                 key={t.author}
                 className="rounded-2xl border border-white/10 bg-dark-950/60 p-6 backdrop-blur-sm md:p-8"
@@ -288,20 +210,12 @@ export default function HomePage() {
       </section>
 
       <section className="relative min-h-[280px] md:min-h-[360px]">
-        <Image
-          src={img.banner}
-          alt="Vue d'ensemble du restaurant et du bar"
-          fill
-          className="object-cover"
-          sizes="100vw"
-        />
+        <Image src={c.cta.image.url} alt={c.cta.image.alt} fill className="object-cover" sizes="100vw" unoptimized />
         <div className="absolute inset-0 bg-gradient-to-r from-dark-950/95 via-dark-950/75 to-dark-950/40" />
         <div className="relative mx-auto flex max-w-6xl flex-col justify-center gap-6 px-4 py-16 md:min-h-[360px] md:flex-row md:items-center md:justify-between md:px-6 md:py-20">
           <div className="max-w-xl">
-            <h2 className="mb-3 font-serif text-3xl font-bold text-white md:text-4xl">Envie de nous rejoindre ce soir ?</h2>
-            <p className="text-dark-200">
-              Réservez votre table en quelques clics ou parcourez la carte pour commander chez vous.
-            </p>
+            <h2 className="mb-3 font-serif text-3xl font-bold text-white md:text-4xl">{c.cta.title}</h2>
+            <p className="text-dark-200">{c.cta.text}</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
@@ -323,28 +237,23 @@ export default function HomePage() {
       <section className="border-t border-white/10 bg-dark-900/40">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:px-6 md:py-20">
           <div>
-            <h2 className="mb-6 font-serif text-3xl font-bold text-white">Horaires</h2>
+            <h2 className="mb-6 font-serif text-3xl font-bold text-white">{c.hours.title}</h2>
             <ul className="space-y-3 text-dark-300">
-              <li className="flex justify-between gap-4 border-b border-white/5 pb-3">
-                <span>Lundi — Jeudi</span>
-                <span className="text-right text-white">12h — 14h30 · 19h — 22h30</span>
-              </li>
-              <li className="flex justify-between gap-4 border-b border-white/5 pb-3">
-                <span>Vendredi — Samedi</span>
-                <span className="text-right text-white">12h — 15h · 19h — 23h</span>
-              </li>
-              <li className="flex justify-between gap-4">
-                <span>Dimanche</span>
-                <span className="text-right text-white">12h — 15h</span>
-              </li>
+              {c.hours.rows.map((row, i) => (
+                <li
+                  key={row.label}
+                  className={`flex justify-between gap-4 ${i < c.hours.rows.length - 1 ? "border-b border-white/5 pb-3" : ""}`}
+                >
+                  <span>{row.label}</span>
+                  <span className="text-right text-white">{row.value}</span>
+                </li>
+              ))}
             </ul>
-            <p className="mt-6 text-sm text-dark-500">Fermeture annuelle : consultez-nous ou nos réseaux pour les dates.</p>
+            <p className="mt-6 text-sm text-dark-500">{c.hours.note}</p>
           </div>
           <div className="flex flex-col justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-primary-900/40 to-dark-950 p-8">
-            <h2 className="mb-3 font-serif text-2xl font-bold text-white">Déjà commandé ?</h2>
-            <p className="mb-6 text-dark-300">
-              Suivez l&apos;état de votre commande avec votre numéro de table ou le code reçu après validation.
-            </p>
+            <h2 className="mb-3 font-serif text-2xl font-bold text-white">{c.orderTracking.title}</h2>
+            <p className="mb-6 text-dark-300">{c.orderTracking.text}</p>
             <Link
               href="/suivi"
               className="inline-flex w-fit items-center rounded-xl bg-white px-6 py-3 font-semibold text-dark-900 transition hover:bg-dark-100"
@@ -356,24 +265,23 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-white/10 bg-dark-950 px-4 py-12 md:px-6">
-        <div
-          className="mx-auto mb-10 grid max-w-6xl grid-cols-3 gap-2 md:grid-cols-6 md:gap-3"
-          aria-hidden
-        >
-          {[img.plat1, img.detail, img.vin, img.plat3, img.plat2, img.salle].map((src, i) => (
+        <div className="mx-auto mb-10 grid max-w-6xl grid-cols-3 gap-2 md:grid-cols-6 md:gap-3" aria-hidden>
+          {c.pageFooter.gridImages.map((src, i) => (
             <div key={i} className="relative aspect-square overflow-hidden rounded-xl border border-white/10 opacity-90 transition hover:opacity-100">
-              <Image src={src} alt="" fill className="object-cover" sizes="(max-width: 768px) 33vw, 16vw" />
+              <Image src={src} alt="" fill className="object-cover" sizes="(max-width: 768px) 33vw, 16vw" unoptimized />
             </div>
           ))}
         </div>
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 border-t border-white/5 pt-10 text-center md:flex-row md:text-left">
           <div>
-            <p className="font-serif text-lg font-semibold text-white">La Maison</p>
-            <p className="mt-1 text-sm text-dark-500">12 rue de l&apos;Exemple · 75000 Ville · 01 23 45 67 89</p>
-            <p className="mt-1 text-sm text-dark-500">contact@lamaison-restaurant.fr</p>
+            <p className="font-serif text-lg font-semibold text-white">{c.pageFooter.name}</p>
+            <p className="mt-1 text-sm text-dark-500">{c.pageFooter.address}</p>
+            <p className="mt-1 text-sm text-dark-500">{c.pageFooter.email}</p>
           </div>
           <div className="flex flex-col items-center gap-3 md:items-end">
-            <p className="text-xs text-dark-600">© {new Date().getFullYear()} La Maison. Tous droits réservés.</p>
+            <p className="text-xs text-dark-600">
+              © {new Date().getFullYear()} {c.pageFooter.copyrightName}. Tous droits réservés.
+            </p>
             <Link href="/admin/login" className="text-xs text-dark-500 underline-offset-4 hover:text-dark-400 hover:underline">
               Espace équipe
             </Link>
