@@ -281,7 +281,7 @@ export default function MenuPage() {
           <div>
             <h2 className="text-xl font-semibold text-dark-900">Suppléments par catégorie</h2>
             <p className="mt-1 text-sm text-dark-500">
-              Choisis une catégorie (ex: pizza). Les suppléments que tu enregistres s’appliqueront aux produits de cette
+              Choisis une catégorie (ex: pizza / plats ....). Les suppléments que tu enregistres s’appliqueront aux produits de cette
               catégorie.
             </p>
           </div>
