@@ -3,8 +3,8 @@ import Link from "next/link";
 export function GlobalFooter() {
   return (
     <footer className="bg-dark-950">
-      <div className="page-shell">
-        <div className="flex items-center justify-center border-t border-white/[0.06] py-6">
+      <div className="home-container">
+        <div className="flex items-center justify-center border-t border-white/[0.06] py-4 md:py-5">
           <Link
             href="https://noblexagency.vercel.app/"
             target="_blank"
