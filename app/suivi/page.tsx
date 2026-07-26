@@ -235,7 +235,7 @@ function SuiviContent() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-primary-900 px-4 py-12">
-      <div className="mx-auto max-w-lg">
+      <div className="page-shell mx-auto w-full max-w-2xl">
         <Link href="/" className="mb-8 inline-block text-sm font-semibold text-primary-300 hover:text-white">
           ← Retour à l&apos;accueil
         </Link>

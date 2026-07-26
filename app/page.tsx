@@ -10,11 +10,11 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen bg-dark-950 text-dark-100">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-dark-950/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 md:px-6">
-          <Link href="/" className="font-serif text-xl font-semibold tracking-wide text-white md:text-2xl">
+        <div className="page-shell flex items-center justify-between gap-3 py-4 sm:gap-4">
+          <Link href="/" className="min-w-0 truncate font-serif text-lg font-semibold tracking-wide text-white sm:text-xl md:text-2xl">
             {c.headerName}
           </Link>
-          <nav className="flex flex-wrap items-center justify-end gap-1 text-sm font-medium md:gap-6 md:text-base">
+          <nav className="flex max-w-[65vw] flex-wrap items-center justify-end gap-0.5 text-xs font-medium sm:max-w-none sm:gap-4 sm:text-sm md:gap-6 md:text-base">
             <Link href="/menu" className="rounded-lg px-2 py-2 text-dark-200 transition hover:text-white md:px-0">
               Carte
             </Link>
@@ -44,7 +44,7 @@ export default async function HomePage() {
           }}
           aria-hidden
         />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:gap-12 md:px-6 md:py-24">
+        <div className="page-shell relative grid items-center gap-10 py-12 sm:py-16 md:grid-cols-2 md:gap-12 md:py-24">
           <div>
             <p className="animate-fade-in mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-primary-300">
               {c.hero.tagline}
@@ -114,12 +114,12 @@ export default async function HomePage() {
       </section>
 
       <div className="border-b border-white/10 bg-primary-950/30 py-4">
-        <p className="mx-auto max-w-6xl px-4 text-center text-sm font-medium tracking-wide text-primary-200/90 md:px-6">
+        <p className="page-shell text-center text-sm font-medium tracking-wide text-primary-200/90">
           {c.bannerStrip}
         </p>
       </div>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6 md:py-20">
+      <section className="page-shell py-12 sm:py-14 md:py-20">
         <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
           {c.stats.map((s) => (
             <div
@@ -150,7 +150,7 @@ export default async function HomePage() {
       </section>
 
       <section className="border-y border-white/10 bg-dark-900/35 py-14 md:py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2 md:px-6">
+        <div className="page-shell grid items-center gap-10 md:grid-cols-2">
           <div className="relative aspect-[5/4] overflow-hidden rounded-2xl border border-white/10 shadow-elevated">
             <Image src={c.ambiance.image.url} alt={c.ambiance.image.alt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" unoptimized />
           </div>
@@ -171,7 +171,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6 md:py-20">
+      <section className="page-shell py-12 sm:py-14 md:py-20">
         <h2 className="mb-3 text-center font-serif text-3xl font-bold text-white md:text-4xl">{c.features.title}</h2>
         <p className="mx-auto mb-12 max-w-2xl text-center text-dark-400">{c.features.subtitle}</p>
         <div className="grid gap-6 md:grid-cols-3">
@@ -193,7 +193,7 @@ export default async function HomePage() {
       </section>
 
       <section className="border-y border-white/10 bg-dark-900/40 py-14 md:py-20">
-        <div className="mx-auto max-w-6xl px-4 md:px-6">
+        <div className="page-shell">
           <h2 className="mb-10 text-center font-serif text-3xl font-bold text-white md:text-4xl">{c.testimonials.title}</h2>
           <div className="grid gap-6 md:grid-cols-3">
             {c.testimonials.items.map((t) => (
@@ -212,7 +212,7 @@ export default async function HomePage() {
       <section className="relative min-h-[280px] md:min-h-[360px]">
         <Image src={c.cta.image.url} alt={c.cta.image.alt} fill className="object-cover" sizes="100vw" unoptimized />
         <div className="absolute inset-0 bg-gradient-to-r from-dark-950/95 via-dark-950/75 to-dark-950/40" />
-        <div className="relative mx-auto flex max-w-6xl flex-col justify-center gap-6 px-4 py-16 md:min-h-[360px] md:flex-row md:items-center md:justify-between md:px-6 md:py-20">
+        <div className="page-shell relative flex flex-col justify-center gap-6 py-14 sm:py-16 md:min-h-[360px] md:flex-row md:items-center md:justify-between md:py-20">
           <div className="max-w-xl">
             <h2 className="mb-3 font-serif text-3xl font-bold text-white md:text-4xl">{c.cta.title}</h2>
             <p className="text-dark-200">{c.cta.text}</p>
@@ -235,7 +235,7 @@ export default async function HomePage() {
       </section>
 
       <section className="border-t border-white/10 bg-dark-900/40">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:px-6 md:py-20">
+        <div className="page-shell grid gap-10 py-12 sm:py-14 md:grid-cols-2 md:py-20">
           <div>
             <h2 className="mb-6 font-serif text-3xl font-bold text-white">{c.hours.title}</h2>
             <ul className="space-y-3 text-dark-300">
@@ -265,14 +265,14 @@ export default async function HomePage() {
       </section>
 
       <footer className="border-t border-white/10 bg-dark-950 px-4 py-12 md:px-6">
-        <div className="mx-auto mb-10 grid max-w-6xl grid-cols-3 gap-2 md:grid-cols-6 md:gap-3" aria-hidden>
+        <div className="page-shell mb-10 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 md:gap-3" aria-hidden>
           {c.pageFooter.gridImages.map((src, i) => (
             <div key={i} className="relative aspect-square overflow-hidden rounded-xl border border-white/10 opacity-90 transition hover:opacity-100">
               <Image src={src} alt="" fill className="object-cover" sizes="(max-width: 768px) 33vw, 16vw" unoptimized />
             </div>
           ))}
         </div>
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 border-t border-white/5 pt-10 text-center md:flex-row md:text-left">
+        <div className="page-shell flex flex-col items-center justify-between gap-6 border-t border-white/5 pt-10 text-center md:flex-row md:text-left">
           <div>
             <p className="font-serif text-lg font-semibold text-white">{c.pageFooter.name}</p>
             <p className="mt-1 text-sm text-dark-500">{c.pageFooter.address}</p>

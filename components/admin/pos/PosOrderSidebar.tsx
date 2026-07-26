@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { useRouter } from "next/navigation";
 import type { PosCartItem } from "@/app/admin/pos/page";
 import { prepareAutoPrintFrame, printTicketFromSelector, waitForNextPaint } from "@/lib/auto-print";
 import { PosTicket } from "./PosTicket";
@@ -59,7 +58,6 @@ export function PosOrderSidebar({
   loadedOrderId?: string | null;
   restaurantName?: string;
 }) {
-  const router = useRouter();
   const [sending, setSending] = useState<"kot" | "bill" | "bill_payment" | "encaisser" | null>(null);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [showTicket, setShowTicket] = useState(false);
@@ -78,8 +76,7 @@ export function PosOrderSidebar({
   const handleEncaissePrintDone = useCallback(() => {
     setAutoPrintTicket(false);
     onReset();
-    router.push("/admin/dashboard");
-  }, [onReset, router]);
+  }, [onReset]);
 
   async function sendKot(andPrint = false) {
     if (orderType === "DINE_IN" && !tableId) {
@@ -130,7 +127,12 @@ export function PosOrderSidebar({
       const order = await res.json();
       setMessage({ type: "ok", text: "Commande envoyée en cuisine (KOT)." });
       onAfterOrderCreated(order);
-      if (andPrint) setTimeout(() => window.print(), 300);
+      if (andPrint) {
+        flushSync(() => setAutoPrintTicket(true));
+        await waitForNextPaint();
+        await printTicketFromSelector();
+        setAutoPrintTicket(false);
+      }
     } catch (e) {
       setMessage({ type: "error", text: e instanceof Error ? e.message : "Erreur" });
     } finally {
@@ -140,7 +142,6 @@ export function PosOrderSidebar({
 
   async function encaisser() {
     if (!loadedOrderId) return;
-    prepareAutoPrintFrame();
     setSending("encaisser");
     setMessage(null);
     try {
@@ -232,8 +233,8 @@ export function PosOrderSidebar({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="space-y-3 border-b border-dark-200 p-5">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="space-y-3 overflow-y-auto border-b border-dark-200 p-3 sm:p-4 lg:p-5">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -464,15 +465,6 @@ export function PosOrderSidebar({
           customerAddress={customerAddress}
           restaurantName={restaurantName}
           onClose={() => setShowTicket(false)}
-          onPrint={() => {
-            if (isPrintingRef.current) return;
-            isPrintingRef.current = true;
-            window.print();
-            // Reset court pour éviter un double print si l'événement se déclenche 2 fois.
-            setTimeout(() => {
-              isPrintingRef.current = false;
-            }, 1500);
-          }}
         />
       )}
     </div>

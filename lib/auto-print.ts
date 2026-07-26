@@ -1,5 +1,4 @@
 let printFrame: HTMLIFrameElement | null = null;
-let printTargetWindow: Window | null = null;
 
 const TICKET_STYLES = `
   @page { size: 80mm auto; margin: 0; }
@@ -34,6 +33,8 @@ const TICKET_STYLES = `
   .border-b { border-bottom: 1px solid #e2e8f0; }
   .flex { display: flex; }
   .justify-between { justify-content: space-between; }
+  .space-y-0\\.5 > * + * { margin-top: 0.125rem; }
+  .space-y-1 > * + * { margin-top: 0.25rem; }
 `;
 
 function buildPrintDocument(bodyHtml: string): string {
@@ -46,8 +47,9 @@ function ensureIframe(): HTMLIFrameElement | null {
 
   printFrame = document.createElement("iframe");
   printFrame.setAttribute("title", "Impression ticket");
+  printFrame.setAttribute("aria-hidden", "true");
   printFrame.style.cssText =
-    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none";
+    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;visibility:hidden";
   document.body.appendChild(printFrame);
   return printFrame;
 }
@@ -71,24 +73,14 @@ function printFromWindow(win: Window): Promise<void> {
       } catch {
         finish();
       }
-    }, 80);
+    }, 120);
 
-    window.setTimeout(finish, 8000);
+    window.setTimeout(finish, 10000);
   });
 }
 
-/** À appeler au tout début du clic (avant tout await) pour conserver l’activation utilisateur. */
+/** Prépare l’iframe d’impression (sans ouvrir de nouvelle page). */
 export function prepareAutoPrintFrame(): void {
-  if (typeof window === "undefined") return;
-
-  if (!printTargetWindow || printTargetWindow.closed) {
-    printTargetWindow = window.open(
-      "",
-      "pos-auto-print",
-      "width=1,height=1,left=-2000,top=-2000,noopener,noreferrer"
-    );
-  }
-
   ensureIframe();
 }
 
@@ -98,23 +90,9 @@ export function waitForNextPaint(): Promise<void> {
   });
 }
 
-export function printTicketFromSelector(
-  selector = ".ticket-print-root .ticket-content-print"
-): Promise<void> {
-  if (typeof document === "undefined") return Promise.resolve();
-
-  const el = document.querySelector(selector);
-  if (!el) return Promise.resolve();
-
-  const html = buildPrintDocument(el.innerHTML);
-
-  if (printTargetWindow && !printTargetWindow.closed) {
-    const doc = printTargetWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    return printFromWindow(printTargetWindow);
-  }
+/** Imprime le HTML du ticket dans une iframe invisible — jamais la page POS. */
+export function printTicketHtml(html: string): Promise<void> {
+  if (typeof document === "undefined" || !html.trim()) return Promise.resolve();
 
   const frame = ensureIframe();
   const win = frame?.contentWindow;
@@ -122,8 +100,20 @@ export function printTicketFromSelector(
 
   const doc = win.document;
   doc.open();
-  doc.write(html);
+  doc.write(buildPrintDocument(html));
   doc.close();
 
   return printFromWindow(win);
+}
+
+/** Imprime uniquement le ticket (80 mm) — pas la page entière. */
+export function printTicketFromSelector(
+  selector = "#ticket-content, .ticket-content-print"
+): Promise<void> {
+  if (typeof document === "undefined") return Promise.resolve();
+
+  const el = document.querySelector(selector);
+  if (!el) return Promise.resolve();
+
+  return printTicketHtml(el.innerHTML);
 }

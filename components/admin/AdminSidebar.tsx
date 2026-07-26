@@ -31,6 +31,7 @@ export function AdminSidebar() {
   const [restaurantName, setRestaurantName] = useState("Restaurant POS");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUpdatedAt, setLogoUpdatedAt] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
   const role = session?.user?.role ?? "STAFF";
   const isAdmin = role === "ADMIN";
@@ -65,7 +66,36 @@ export function AdminSidebar() {
     logoUrl && `${logoUrl}${logoUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(logoUpdatedAt ?? "1")}`;
 
   return (
-    <aside className="flex w-64 flex-col bg-dark-900 text-white">
+    <>
+      <div className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-white/10 bg-dark-900 px-4 text-white lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+          aria-label="Ouvrir le menu"
+        >
+          ☰ Menu
+        </button>
+        <span className="truncate text-sm font-semibold">{restaurantName}</span>
+        <Link href="/admin/pos" className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold">
+          POS
+        </Link>
+      </div>
+
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          aria-label="Fermer le menu"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-dark-900 text-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
       <div className="border-b border-white/10 px-6 py-5">
         <Link
           href="/admin/dashboard"
@@ -92,6 +122,7 @@ export function AdminSidebar() {
             <Link
               key={link.href}
               href={link.href}
+              onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
                 pathname === link.href
                   ? "bg-primary-500/20 text-primary-300"
@@ -121,5 +152,6 @@ export function AdminSidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

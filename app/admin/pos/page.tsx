@@ -256,22 +256,22 @@ export default function PosPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-dark-100">
-      <header className="flex flex-shrink-0 items-center justify-between border-b border-dark-200 bg-white px-6 py-4 shadow-card">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-dark-500">{restaurantName}</p>
-          <h1 className="text-xl font-bold text-dark-900">Point de vente</h1>
+    <div className="flex h-[100dvh] flex-col bg-dark-100">
+      <header className="flex flex-shrink-0 items-center justify-between border-b border-dark-200 bg-white px-4 py-3 shadow-card sm:px-6 sm:py-4">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium uppercase tracking-wide text-dark-500">{restaurantName}</p>
+          <h1 className="text-lg font-bold text-dark-900 sm:text-xl">Point de vente</h1>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1">
-        <div className="flex-1 overflow-auto p-6">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
           <PosMenuGrid
             items={menuItems}
             categories={categories}
             onAddToCart={addToCart}
           />
         </div>
-        <div className="flex w-[400px] flex-shrink-0 flex-col border-l border-dark-200 bg-white shadow-elevated">
+        <div className="flex max-h-[48vh] w-full flex-shrink-0 flex-col border-t border-dark-200 bg-white shadow-elevated lg:max-h-none lg:w-[min(100%,420px)] lg:border-l lg:border-t-0 xl:w-[440px]">
           <PosOrderSidebar
             cart={cart}
             ticketCart={ticketCart}

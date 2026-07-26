@@ -28,9 +28,8 @@ export function KitchenPrintTicket({
   items,
 }: KitchenPrintTicketProps) {
   const ticket = (
-    <div className="ticket-print-root fixed inset-0 z-[200] pointer-events-none opacity-0 print:opacity-100 print:pointer-events-auto">
-      <div className="ticket-modal-container bg-white font-mono text-sm text-dark-800">
-        <div className="ticket-content-print p-4">
+    <div className="pointer-events-none absolute left-0 top-0 h-0 w-0 overflow-hidden opacity-0" aria-hidden>
+      <div id="ticket-content" className="ticket-content-print p-4 font-mono text-sm text-dark-800">
           <div className="text-center border-b border-dark-300 pb-2 mb-3">
             <p className="font-bold text-base">{KITCHEN_STATION_LABELS[station]}</p>
             <p className="text-xs text-dark-600">Bon de préparation</p>
@@ -56,7 +55,6 @@ export function KitchenPrintTicket({
               </li>
             ))}
           </ul>
-        </div>
       </div>
     </div>
   );

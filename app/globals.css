@@ -12,6 +12,14 @@
 body {
   color: var(--foreground);
   background: var(--background);
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+html {
+  width: 100%;
+  overflow-x: hidden;
 }
 
 @layer base {
@@ -34,6 +42,10 @@ body {
   .input-field {
     @apply w-full rounded-xl border border-dark-200 bg-white px-4 py-3 text-dark-900 outline-none transition placeholder:text-dark-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
   }
+  /** Conteneur pleine largeur écran avec marges adaptées mobile → desktop */
+  .page-shell {
+    @apply mx-auto w-full max-w-none px-3 sm:px-5 md:px-8 lg:px-12 xl:px-16 2xl:px-20;
+  }
 }
 
 @layer utilities {
@@ -43,70 +55,6 @@ body {
 }
 
 /*
- * Impression ticket : portail sur document.body (.ticket-print-root).
- * On évite visibility:hidden (souvent = pages blanches en réel / PDF).
+ * Impression : uniquement via iframe (lib/auto-print.ts).
+ * Aucune règle @media print sur la page principale — évite d'imprimer le POS entier.
  */
-@media print {
-  /* 80 mm = largeur standard ticket caisse ; hauteur = contenu (rouleau) */
-  @page {
-    size: 80mm auto;
-    margin: 0;
-  }
-
-  html,
-  body {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    background: white !important;
-  }
-
-  body.ticket-modal-open > *:not(.ticket-print-root) {
-    display: none !important;
-  }
-
-  body.ticket-modal-open .ticket-print-root {
-    position: static !important;
-    inset: auto !important;
-    display: block !important;
-    width: auto !important;
-    max-width: none !important;
-    min-height: 0 !important;
-    background: transparent !important;
-    padding: 0 !important;
-    float: none !important;
-  }
-
-  body.ticket-modal-open .ticket-modal-container {
-    position: static !important;
-    display: block !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    color: #0f172a !important;
-    border: none !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  .ticket-content-print {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    padding: 0.5rem !important;
-    border: none !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  body.ticket-modal-open .ticket-modal-container > div {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-  }
-}

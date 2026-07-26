@@ -129,7 +129,7 @@ export function MenuClient({
 
   return (
     <>
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="page-shell py-4">
         {!hoursLoading && !restaurantOpen && (
           <RestaurantClosedBanner
             hoursToday={hoursToday}
@@ -183,7 +183,7 @@ export function MenuClient({
           <button
             onClick={() => setCartOpen(true)}
             disabled={!canOrder}
-            className="fixed bottom-6 left-4 right-4 mx-auto flex max-w-4xl items-center justify-center gap-2 rounded-2xl bg-primary-500 py-4 font-semibold text-white shadow-elevated transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="fixed bottom-6 left-3 right-3 z-20 mx-auto flex w-auto max-w-none items-center justify-center gap-2 rounded-2xl bg-primary-500 py-4 font-semibold text-white shadow-elevated transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50 sm:left-6 sm:right-6"
           >
             Panier ({cartCount}) — {cartTotal.toFixed(2)} DA
           </button>

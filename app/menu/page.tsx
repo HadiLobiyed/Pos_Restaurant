@@ -112,7 +112,7 @@ function MenuContent() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-dark-50 to-white pb-24">
       <header className="sticky top-0 z-10 border-b border-dark-200/60 bg-white/80 px-4 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2">
+        <div className="page-shell flex items-center justify-between gap-2">
           {hideBack ? (
             <div className="w-16 shrink-0" />
           ) : (

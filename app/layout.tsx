@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -13,6 +13,12 @@ const font = Plus_Jakarta_Sans({
 });
 
 export const dynamic = "force-dynamic";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const { restaurantName, logoUrl, logoUpdatedAt } = await getRestaurantBranding();
@@ -39,8 +45,8 @@ export default function RootLayout({
       <body className={`${font.variable} font-sans antialiased`}>
         <Providers>
           <BrandingHead />
-          <div className="flex min-h-screen flex-col">
-            <div className="flex-1">{children}</div>
+          <div className="flex min-h-screen w-full flex-col">
+            <div className="w-full flex-1">{children}</div>
             <GlobalFooter />
           </div>
         </Providers>
